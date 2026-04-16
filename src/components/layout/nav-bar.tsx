@@ -6,6 +6,7 @@ import { useGameStore } from "@/lib/store/game-store";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home" },
+  { href: "/leaderboard", label: "Classifica" },
   { href: "/squad", label: "Squad" },
   { href: "/shop", label: "Shop" },
 ];

@@ -31,38 +31,81 @@ export default function MatchPage() {
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isFinished, setIsFinished] = useState(false);
   const [phaserReady, setPhaserReady] = useState(false);
+  const [isSearching, setIsSearching] = useState(true);
+  const [opponentInfo, setOpponentInfo] = useState<{ name: string; badge: string; playstyle: string } | null>(null);
 
   const totalTicks = 90;
 
-  // Build engine once on mount
+  // Fetch opponent and build engine once on mount
   useEffect(() => {
     if (!validation.valid || engineRef.current) return;
 
-    const homeRoster = lineup.map(l => availablePlayers.find(p => p.id === l.playerId)!);
-    const awayRoster = [...homeRoster].reverse();
-    homeRosterRef.current = homeRoster;
-    awayRosterRef.current = awayRoster;
+    async function setupMatch() {
+      if (!supabase) return;
 
-    engineRef.current = new MatchEngine(
-      {
-        totalTicks,
-        halftimeTick: 45,
-        seed: generateSeed(),
-        homePlaystyle: playstyle,
-        awayPlaystyle: "counter_attack",
-        homeStance: stance,
-        awayStance: "balanced",
-        homeCommand: command,
-        awayCommand: "none",
-      },
-      homeRoster,
-      awayRoster
-    );
+      const { data: user } = await supabase.auth.getUser();
+      
+      // 1. Fetch random opponent squad
+      const { data: squads } = await supabase
+        .from('squads')
+        .select('*, profiles(username, team_name, badge_id)')
+        .neq('user_id', user.user?.id)
+        .limit(10); // Pick from a small pool for randomness
+
+      let opponent: any = null;
+      if (squads && squads.length > 0) {
+        opponent = squads[Math.floor(Math.random() * squads.length)];
+      }
+
+      const homeRoster = lineup.map(l => availablePlayers.find(p => p.id === l.playerId)!);
+      homeRosterRef.current = homeRoster;
+
+      let awayRoster: typeof STARTER_PLAYERS;
+      let awayPlaystyle: any = "balanced";
+      let awayName = "AI Bots";
+      let awayBadge = "badge_lightning";
+
+      if (opponent) {
+        // Map opponent lineup IDs to definitions
+        awayRoster = opponent.lineup.map((slot: any) => 
+          STARTER_PLAYERS.find(p => p.id === slot.playerId) || STARTER_PLAYERS[0]
+        );
+        awayPlaystyle = opponent.playstyle;
+        awayName = opponent.profiles?.team_name || opponent.profiles?.username || "Rival Tech";
+        awayBadge = opponent.profiles?.badge_id || "badge_lightning";
+      } else {
+        // Fallback to mirror if no one else exists (first user problem)
+        awayRoster = [...homeRoster].reverse();
+      }
+      
+      awayRosterRef.current = awayRoster;
+      setOpponentInfo({ name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
+
+      engineRef.current = new MatchEngine(
+        {
+          totalTicks,
+          halftimeTick: 45,
+          seed: generateSeed(),
+          homePlaystyle: playstyle,
+          awayPlaystyle: awayPlaystyle,
+          homeStance: stance,
+          awayStance: "balanced",
+          homeCommand: command,
+          awayCommand: "none",
+        },
+        homeRoster,
+        awayRoster
+      );
+
+      // Delay searching state slightly for "feel"
+      setTimeout(() => setIsSearching(false), 1500);
+    }
+
+    setupMatch();
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validation.valid]);
 
   // Listen for Phaser scene ready, THEN init match
@@ -134,12 +177,27 @@ export default function MatchPage() {
     engineRef.current?.intervene("home", { type: "stance_change", stance: s });
   };
 
-  const finishMatch = () => {
-    if (!engineRef.current) return;
+  const finishMatch = async () => {
+    if (!engineRef.current || !supabase) return;
     const matchOutcome = engineRef.current.getResult();
+    const { data: user } = await supabase.auth.getUser();
+
+    // Save match record to Supabase
+    await supabase.from('matches').insert({
+      home_user_id: user.user?.id,
+      away_user_name: opponentInfo?.name || "AI", // Note: adding this for better record keeping
+      home_score: score.home,
+      away_score: score.away,
+      winner_id: matchOutcome.result.outcome === "win" ? user.user?.id : null,
+      match_data: {
+        timeline: engineRef.current.getTimeline(),
+        playerStats: matchOutcome.playerStats
+      }
+    });
+
     setMatchResult({
       id: crypto.randomUUID(),
-      userId: "local",
+      userId: user.user?.id || "local",
       squadId: "squad_1",
       opponentSeed: 0,
       result: matchOutcome.result,
@@ -180,24 +238,24 @@ export default function MatchPage() {
             {/* Scoreboard */}
             <div className="flex items-center gap-8">
               <div className="text-right">
-                <div className="text-[10px] text-accent/70 uppercase tracking-widest font-mono mb-0.5">You</div>
+                <div className="text-[10px] text-accent/70 uppercase tracking-widest font-mono mb-0.5">YOU</div>
                 <div className="text-5xl font-black tabular-nums text-white" style={{textShadow: '0 0 20px rgba(99,102,241,0.5)'}}>{score.home}</div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="text-xs text-foreground/40 font-mono tabular-nums">{tickToMatchTime(tick, totalTicks)}</div>
                 <div className="text-foreground/30 text-base my-0.5">vs</div>
-                {!phaserReady && <div className="text-[9px] text-muted animate-pulse">Loading...</div>}
+                {isSearching && <div className="text-[9px] text-accent animate-pulse font-bold">MATCHMAKING...</div>}
               </div>
               <div className="text-left">
-                <div className="text-[10px] text-rose-400/70 uppercase tracking-widest font-mono mb-0.5">CPU</div>
+                <div className="text-[10px] text-rose-400/70 uppercase tracking-widest font-mono mb-0.5">{opponentInfo?.name || "CPU"}</div>
                 <div className="text-5xl font-black tabular-nums text-rose-400">{score.away}</div>
               </div>
             </div>
 
-            {/* Status */}
+          {/* Status */}
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isFinished ? 'bg-muted' : 'bg-emerald-400 animate-pulse'}`} style={isFinished ? {} : {boxShadow: '0 0 8px #34d399'}} />
-              <span className="text-[10px] text-muted uppercase tracking-widest font-mono">{isFinished ? 'FT' : 'Live'}</span>
+              <span className={`w-2 h-2 rounded-full ${isFinished ? 'bg-muted' : isSearching ? 'bg-accent animate-ping' : 'bg-emerald-400 animate-pulse'}`} style={isFinished ? {} : {boxShadow: isSearching ? '0 0 8px #6366f1' : '0 0 8px #34d399'}} />
+              <span className="text-[10px] text-muted uppercase tracking-widest font-mono">{isFinished ? 'FT' : isSearching ? 'SEARCHING' : 'Live'}</span>
             </div>
           </div>
 

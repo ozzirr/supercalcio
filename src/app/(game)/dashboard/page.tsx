@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useGameStore } from "@/lib/store/game-store";
 import { STARTER_PLAYERS } from "@/content/players";
 import { PLAYSTYLES } from "@/content/playstyles";
+import { ProfileSetup } from "@/components/profile/profile-setup";
 
 const FEATURES = [
   {
@@ -43,6 +44,8 @@ export default function DashboardPage() {
   const playstyle = useGameStore((s) => s.playstyle);
   const xp = useGameStore((s) => s.xp);
   const currency = useGameStore((s) => s.currency);
+  const teamName = useGameStore((s) => s.teamName);
+  const badgeId = useGameStore((s) => s.badgeId);
 
   const squadPlayers = lineup
     .sort((a, b) => a.position - b.position)
@@ -56,6 +59,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
+      <ProfileSetup />
+
       {/* Hero banner */}
       <div className="relative px-8 pt-16 pb-10 text-center overflow-hidden">
         {/* Animated background orbs */}
@@ -73,8 +78,14 @@ export default function DashboardPage() {
           <h1 className="text-5xl font-black tracking-tight mb-3">
             <span className="text-white">Super</span><span style={{color: '#818cf8'}}>calcio</span>
           </h1>
-          <p className="text-foreground/50 text-lg max-w-lg mx-auto leading-relaxed">
-            Costruisci la tua squadra. Scegli la strategia. Domina l&apos;arena.
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-2xl border border-accent/30 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+              {badgeId === "badge_lightning" ? "⚡" : badgeId === "badge_dragon" ? "🐉" : badgeId === "badge_shield" ? "🛡️" : badgeId === "badge_fire" ? "🔥" : "⭐"}
+            </div>
+            <div className="text-xl font-bold tracking-tight text-foreground/90">{teamName}</div>
+          </div>
+          <p className="text-foreground/50 text-sm max-w-lg mx-auto leading-relaxed mt-4 italic">
+            &quot;Costruisci la tua squadra. Scegli la strategia. Domina l&apos;arena.&quot;
           </p>
         </div>
       </div>

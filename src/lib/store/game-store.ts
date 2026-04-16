@@ -24,6 +24,8 @@ type GameState = {
   xp: number;
   currency: number;
   purchasedItems: string[];
+  teamName: string;
+  badgeId: string;
 
   // Actions
   setLineup: (lineup: LineupSlot[]) => void;
@@ -40,6 +42,7 @@ type GameState = {
   setMatchInProgress: (inProgress: boolean) => void;
   addRewards: (xp: number, currency: number) => void;
   buyItem: (itemId: string, cost: number) => boolean;
+  updateProfile: (updates: { teamName?: string; badgeId?: string }) => Promise<void>;
   initializeUser: () => void;
   logout: () => void;
   saveSquad: () => Promise<void>;
@@ -59,6 +62,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   xp: 0,
   currency: 100,
   purchasedItems: [],
+  teamName: "SC Squad",
+  badgeId: "badge_lightning",
 
   setLineup: (lineup) => set({ lineup }),
 
@@ -125,8 +130,31 @@ export const useGameStore = create<GameState>((set, get) => ({
   buyItem: (itemId, cost) => {
     const state = get();
     if (state.currency < cost || state.purchasedItems.includes(itemId)) return false;
-    set({ currency: state.currency - cost, purchasedItems: [...state.purchasedItems, itemId] });
+    
+    const newItems = [...state.purchasedItems, itemId];
+    const newCurrency = state.currency - cost;
+
+    set({ currency: newCurrency, purchasedItems: newItems });
+
+    if (state.user && supabase) {
+      supabase.from('profiles').update({ 
+        currency: newCurrency, 
+        purchased_items: newItems 
+      }).eq('id', state.user.id).then();
+    }
     return true;
+  },
+
+  updateProfile: async (updates) => {
+    const state = get();
+    if (!state.user || !supabase) return;
+
+    const dbUpdates: any = {};
+    if (updates.teamName) dbUpdates.team_name = updates.teamName;
+    if (updates.badgeId) dbUpdates.badge_id = updates.badgeId;
+
+    set({ ...updates });
+    await supabase.from('profiles').update(dbUpdates).eq('id', state.user.id);
   },
 
   initializeUser: () => {
@@ -135,8 +163,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     supabase.auth.getSession().then(({ data }: { data: { session: { user: any } | null } }) => {
       if (data.session?.user) {
         set({ user: data.session.user });
-        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(({ data: profile }: { data: any }) => {
-          if (profile) set({ xp: profile.xp, currency: profile.currency });
+        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(async ({ data: profile }: { data: any }) => {
+          if (profile) {
+            set({ 
+              xp: profile.xp, 
+              currency: profile.currency,
+              teamName: profile.team_name || "SC Squad",
+              badgeId: profile.badge_id || "badge_lightning",
+              purchasedItems: profile.purchased_items || []
+            });
+          } else {
+            // Fallback for existing users without a profile
+            const { data: newUserProfile } = await supabase.from('profiles').insert({
+              id: data.session.user.id,
+              username: data.session.user.email?.split('@')[0] || "manager",
+              team_name: "Squad " + data.session.user.id.substring(0, 4)
+            }).select().single();
+            
+            if (newUserProfile) {
+              set({ 
+                teamName: newUserProfile.team_name,
+                currency: newUserProfile.currency,
+                xp: newUserProfile.xp
+              });
+            }
+          }
         });
         supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad }: { data: any }) => {
           if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
