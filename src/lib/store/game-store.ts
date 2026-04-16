@@ -25,6 +25,7 @@ type GameState = {
   currency: number;
   purchasedItems: string[];
   teamName: string;
+  username: string;
   badgeId: string;
   ownedPlayers: any[]; // User's roster with levels and bonuses
 
@@ -45,7 +46,7 @@ type GameState = {
   buyItem: (itemId: string, cost: number) => boolean;
   buyPlayer: (playerId: string, cost: number) => Promise<boolean>;
   upgradePlayer: (playerId: string, stat: string, cost: number) => Promise<boolean>;
-  updateProfile: (updates: { teamName?: string; badgeId?: string }) => Promise<void>;
+  updateProfile: (updates: { teamName?: string; badgeId?: string; username?: string }) => Promise<void>;
   initializeUser: () => void;
   logout: () => void;
   saveSquad: () => Promise<void>;
@@ -66,6 +67,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   currency: 100,
   purchasedItems: [],
   teamName: "SC Squad",
+  username: "Manager",
   badgeId: "badge_lightning",
   ownedPlayers: [],
 
@@ -205,6 +207,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const dbUpdates: any = {};
     if (updates.teamName) dbUpdates.team_name = updates.teamName;
     if (updates.badgeId) dbUpdates.badge_id = updates.badgeId;
+    if (updates.username) dbUpdates.username = updates.username;
 
     set({ ...updates });
     await supabase.from('profiles').update(dbUpdates).eq('id', state.user.id);
@@ -222,6 +225,7 @@ export const useGameStore = create<GameState>((set, get) => ({
               xp: profile.xp, 
               currency: profile.currency,
               teamName: profile.team_name || "SC Squad",
+              username: profile.username || "Manager",
               badgeId: profile.badge_id || "badge_lightning",
               purchasedItems: profile.purchased_items || []
             });

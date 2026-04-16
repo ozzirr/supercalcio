@@ -211,153 +211,195 @@ export default function MatchPage() {
     router.push("/results");
   };
 
+  const [activeTab, setActiveTab] = useState<"feed" | "tactics">("feed");
+
   const progress = (tick / totalTicks) * 100;
 
   return (
-    <div className="fixed inset-0 top-[57px] flex flex-col overflow-hidden">
-      {/* Main content: two columns — fills remaining height */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+    <div className="fixed inset-0 top-[57px] flex flex-col lg:flex-row overflow-hidden bg-surface">
+      {/* 1. ARENA SECTION (TOP on mobile, LEFT on desktop) */}
+      <div className="flex-1 flex flex-col bg-[#05070e] relative overflow-hidden min-h-0 lg:border-r border-border">
+        {/* Progress bar */}
+        <div className="h-1 w-full bg-white/5 absolute top-0 left-0 z-20">
+          <div
+            className="h-full bg-accent transition-all duration-500"
+            style={{ width: `${progress}%`, boxShadow: "0 0 15px #fbbf24" }}
+          />
+        </div>
 
-        {/* Left: Arena — takes all available height */}
-        <div className="flex-1 flex flex-col bg-[#05070e] relative overflow-hidden min-h-0">
-          {/* Neon progress bar */}
-          <div className="h-0.5 w-full bg-border/30 absolute top-0 left-0 z-10">
-            <div
-              className="h-full bg-accent transition-all duration-500"
-              style={{ width: `${progress}%`, boxShadow: "0 0 12px #6366f1" }}
-            />
-          </div>
-
-          {/* HUD */}
-          <div className="flex items-center justify-between px-6 py-3 z-10 relative" style={{background: 'linear-gradient(180deg, rgba(5,7,14,0.95) 0%, transparent 100%)'}}>
-            {/* Team label */}
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-accent" style={{boxShadow: '0 0 8px #6366f1'}} />
-              <span className="text-xs font-semibold text-foreground/80 capitalize tracking-wide">{playstyle.replace(/_/g, " ")}</span>
+        {/* Scoreboard HUD */}
+        <div className="relative z-10 px-4 lg:px-6 py-4 lg:py-6" style={{background: 'linear-gradient(180deg, rgba(5,7,14,0.95) 0%, transparent 100%)'}}>
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            {/* Home Team */}
+            <div className="flex flex-col items-center lg:items-start gap-1 lg:gap-2">
+              <div className="text-[8px] lg:text-[10px] text-accent/70 uppercase tracking-[0.2em] font-black">Tu</div>
+              <div className="text-2xl lg:text-5xl font-black tabular-nums text-white italic leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
+                {score.home}
+              </div>
+              <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{playstyle.replace(/_/g, " ")}</div>
             </div>
 
-            {/* Scoreboard */}
-            <div className="flex items-center gap-8">
-              <div className="text-right">
-                <div className="text-[10px] text-accent/70 uppercase tracking-widest font-mono mb-0.5">YOU</div>
-                <div className="text-5xl font-black tabular-nums text-white" style={{textShadow: '0 0 20px rgba(99,102,241,0.5)'}}>{score.home}</div>
+            {/* Match Status / Time */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-white/5 border border-white/10 px-3 py-1 rounded-full mb-2">
+                 <div className="text-xs lg:text-base font-black text-foreground/80 font-mono tabular-nums leading-none">
+                  {tickToMatchTime(tick, totalTicks)}
+                 </div>
               </div>
-              <div className="flex flex-col items-center">
-                <div className="text-xs text-foreground/40 font-mono tabular-nums">{tickToMatchTime(tick, totalTicks)}</div>
-                <div className="text-foreground/30 text-base my-0.5">vs</div>
-                {isSearching && <div className="text-[9px] text-accent animate-pulse font-bold">MATCHMAKING...</div>}
-              </div>
-              <div className="text-left">
-                <div className="text-[10px] text-rose-400/70 uppercase tracking-widest font-mono mb-0.5">{opponentInfo?.name || "CPU"}</div>
-                <div className="text-5xl font-black tabular-nums text-rose-400">{score.away}</div>
-              </div>
+              {isSearching && (
+                <div className="text-[8px] text-accent animate-pulse font-black uppercase tracking-widest">Matchmaking...</div>
+              )}
+              {!isSearching && !isFinished && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+                  <span className="text-[8px] text-muted uppercase tracking-widest font-black">Live Match</span>
+                </div>
+              )}
+              {isFinished && (
+                <div className="text-[8px] text-muted uppercase tracking-widest font-black">Full Time</div>
+              )}
             </div>
 
-          {/* Status */}
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isFinished ? 'bg-muted' : isSearching ? 'bg-accent animate-ping' : 'bg-emerald-400 animate-pulse'}`} style={isFinished ? {} : {boxShadow: isSearching ? '0 0 8px #6366f1' : '0 0 8px #34d399'}} />
-              <span className="text-[10px] text-muted uppercase tracking-widest font-mono">{isFinished ? 'FT' : isSearching ? 'SEARCHING' : 'Live'}</span>
+            {/* Away Team */}
+            <div className="flex flex-col items-center lg:items-end gap-1 lg:gap-2">
+              <div className="text-[8px] lg:text-[10px] text-rose-400/70 uppercase tracking-[0.2em] font-black text-right">
+                {opponentInfo?.name || "CPU"}
+              </div>
+              <div className="text-2xl lg:text-5xl font-black tabular-nums text-rose-500 italic leading-none drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]">
+                {score.away}
+              </div>
+              <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{opponentInfo?.playstyle || "Standard"}</div>
             </div>
-          </div>
-
-          {/* Phaser Canvas */}
-          <div className="flex-1 relative overflow-hidden">
-            <PhaserGame />
           </div>
         </div>
 
-        {/* Right: Feed + Controls — fixed width, never scrolls the page */}
-        <div className="w-80 flex flex-col border-l border-border bg-[#07090f] min-h-0 overflow-hidden">
-          {/* Match Feed */}
-          <div className="p-3 border-b border-border">
-            <span className="text-xs text-muted uppercase tracking-widest font-mono">Match Feed</span>
-          </div>
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 font-mono text-xs">
-            {events.length === 0 && (
-              <div className="text-center text-muted italic py-8">
-                {phaserReady ? "Kick-off incoming..." : "Loading..."}
-              </div>
-            )}
-            {events.map((e, idx) => {
-              const isGoal = e.type === "goal";
-              const isBreak = e.type === "halftime" || e.type === "full_time";
-              return (
-                <div
-                  key={`${e.tick}-${idx}`}
-                  className={`flex gap-2 items-start rounded px-2 py-1.5 fade-in ${
-                    isGoal
-                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold"
-                      : isBreak
-                      ? "bg-accent/10 border border-accent/20 text-accent font-semibold justify-center text-center"
-                      : "text-foreground/60 hover:text-foreground/90"
-                  }`}
-                >
-                  {!isBreak && (
-                    <span className="text-muted/50 shrink-0 tabular-nums">
-                      {tickToMatchTime(e.tick, totalTicks)}
-                    </span>
-                  )}
-                  <span>{formatMatchEvent(e, STARTER_PLAYERS)}</span>
-                </div>
-              );
-            })}
-            <div ref={feedEndRef} />
-          </div>
+        {/* Phaser Canvas */}
+        <div className="flex-1 relative overflow-hidden h-[35vh] lg:h-auto border-y border-white/5 lg:border-none">
+          <PhaserGame />
+        </div>
+      </div>
 
-          {/* CTA when finished */}
-          {isFinished && (
-            <div className="p-4 border-t border-border fade-in">
-              <button onClick={finishMatch} className="btn-primary w-full">
-                View Results →
-              </button>
+      {/* 2. CONTROLS & FEED SECTION (BOTTOM on mobile, RIGHT on desktop) */}
+      <div className="w-full lg:w-96 flex flex-col bg-surface overflow-hidden h-[40vh] lg:h-full">
+        {/* Mobile Tabs */}
+        <div className="flex lg:hidden border-b border-border bg-black/20">
+          <button 
+            onClick={() => setActiveTab("feed")}
+            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+              activeTab === "feed" ? "text-accent border-b-2 border-accent bg-accent/5" : "text-muted"
+            }`}
+          >
+            Chronicle
+          </button>
+          <button 
+            onClick={() => setActiveTab("tactics")}
+            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+              activeTab === "tactics" ? "text-accent border-b-2 border-accent bg-accent/5" : "text-muted"
+            }`}
+          >
+            Tactical Deck
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Feed Content */}
+          <div className={`flex-1 flex flex-col min-h-0 ${activeTab === "tactics" ? "hidden lg:flex" : "flex"}`}>
+            <div className="hidden lg:flex p-4 border-b border-border bg-black/10">
+              <span className="text-[10px] text-muted uppercase tracking-widest font-black">LIVE CHRONICLE</span>
             </div>
-          )}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 font-mono text-[10px] lg:text-xs bg-black/10">
+              {events.length === 0 && (
+                <div className="text-center text-muted/30 italic py-12 flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 rounded-full border border-dashed border-white/10 animate-spin" />
+                  {phaserReady ? "Awaiting kick-off..." : "Initializing data streams..."}
+                </div>
+              )}
+              {events.map((e, idx) => {
+                const isGoal = e.type === "goal";
+                const isBreak = e.type === "halftime" || e.type === "full_time";
+                return (
+                  <div
+                    key={`${e.tick}-${idx}`}
+                    className={`flex gap-3 items-start rounded-xl px-3 py-2.5 transition-all text-xs lg:text-sm animate-in fade-in slide-in-from-left-2 ${
+                      isGoal
+                        ? "bg-accent/15 border border-accent/30 text-accent font-black italic shadow-lg shadow-accent/5"
+                        : isBreak
+                        ? "bg-white/10 border border-white/10 text-white font-black justify-center text-center italic"
+                        : "text-foreground/70 bg-white/5 border border-white/5"
+                    }`}
+                  >
+                    {!isBreak && (
+                      <span className="text-accent/60 shrink-0 tabular-nums font-black">
+                        {tickToMatchTime(e.tick, totalTicks)}
+                      </span>
+                    )}
+                    <span className="leading-tight">{formatMatchEvent(e, STARTER_PLAYERS)}</span>
+                  </div>
+                );
+              })}
+              <div ref={feedEndRef} />
+            </div>
+          </div>
 
           {/* Tactical Controls */}
-          <div className="border-t border-border p-4 space-y-4">
-            <div>
-              <div className="text-[10px] text-muted uppercase tracking-widest mb-2">Stance</div>
-              <div className="flex gap-1.5">
-                {(["balanced", "aggressive", "defensive"] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStanceChange(s)}
-                    disabled={isFinished}
-                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-all ${
-                      stance === s
-                        ? "bg-accent text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]"
-                        : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground disabled:opacity-40"
-                    }`}
-                  >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className={`shrink-0 p-4 lg:p-6 space-y-6 lg:space-y-8 bg-surface border-t border-border shadow-2xl z-20 ${
+              activeTab === "feed" ? "hidden lg:block" : "block"
+            }`}>
+            {isFinished && (
+              <button 
+                onClick={finishMatch} 
+                className="btn-primary w-full py-4 text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-accent/20 animate-pulse mb-6"
+              >
+                Conclude & Save Results →
+              </button>
+            )}
 
-            <div>
-              <div className="text-[10px] text-muted uppercase tracking-widest mb-2">Command</div>
-              <div className="flex gap-1.5">
-                {(["none", "focus_attack", "protect_lead"] as const).map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setCommand(c)}
-                    disabled={isFinished}
-                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-all ${
-                      command === c
-                        ? "bg-accent text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]"
-                        : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground disabled:opacity-40"
-                    }`}
-                  >
-                    {c === "none" ? "None" : c === "focus_attack" ? "Attack" : "Protect"}
-                  </button>
-                ))}
+            <div className="space-y-4">
+              <div>
+                <div className="text-[9px] text-muted uppercase tracking-[0.3em] font-black mb-3 ml-1">Team Stance</div>
+                <div className="flex gap-2">
+                  {(["balanced", "aggressive", "defensive"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStanceChange(s)}
+                      disabled={isFinished}
+                      className={`flex-1 py-3 lg:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        stance === s
+                          ? "bg-accent text-black border-accent shadow-xl shadow-accent/10"
+                          : "bg-white/5 text-muted border-white/5 hover:bg-white/10 hover:text-foreground disabled:opacity-20"
+                      }`}
+                    >
+                      {s === "balanced" ? "Bal" : s === "aggressive" ? "Atk" : "Def"}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <button className="w-full py-2 rounded text-xs font-semibold bg-white/5 text-muted/40 cursor-not-allowed border border-dashed border-border" disabled>
-              ⚡ Ultimate — Charging...
-            </button>
+              <div>
+                <div className="text-[9px] text-muted uppercase tracking-[0.3em] font-black mb-3 ml-1">Tactical Command</div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                  {(["none", "focus_attack", "protect_lead"] as const).map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setCommand(c)}
+                      disabled={isFinished}
+                      className={`py-3 lg:py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                        command === c
+                          ? "bg-accent/20 text-accent border-accent/40 shadow-lg"
+                          : "bg-white/5 text-muted border-white/5 hover:bg-white/10 hover:text-foreground disabled:opacity-20"
+                      } ${c === "none" && "col-span-2 lg:col-span-1"}`}
+                    >
+                      {c === "none" ? "None" : c === "focus_attack" ? "Assalto" : "Blindata"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] bg-white/5 text-muted/30 cursor-not-allowed border border-dashed border-border" disabled>
+                ⚡ Ultimate — Charging...
+              </button>
+            </div>
           </div>
         </div>
       </div>

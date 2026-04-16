@@ -80,7 +80,7 @@ CREATE TABLE public.user_players (
 );
 
 ALTER TABLE public.user_players ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own players." ON public.user_players FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "User players are viewable by everyone." ON public.user_players FOR SELECT USING (true);
 CREATE POLICY "Users can update own players." ON public.user_players FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own players." ON public.user_players FOR INSERT WITH CHECK (auth.uid() = user_id);
 

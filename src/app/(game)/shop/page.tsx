@@ -155,46 +155,46 @@ export default function ShopPage() {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Header */}
-      <div className="relative px-8 pt-12 pb-8 overflow-hidden">
+      <div className="relative px-4 lg:px-8 pt-8 lg:pt-12 pb-6 lg:pb-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-1/3 w-[400px] h-[200px] rounded-full opacity-15"
-            style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }} />
+          <div className="absolute top-0 right-1/3 w-[300px] lg:w-[400px] h-[150px] lg:h-[200px] rounded-full opacity-15"
+            style={{ background: 'radial-gradient(circle, #fbbf24 0%, transparent 70%)' }} />
         </div>
-        <div className="relative z-10 flex items-end justify-between max-w-5xl mx-auto">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-warning/30 bg-warning/10 text-warning text-xs uppercase tracking-widest font-semibold mb-3">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between max-w-5xl mx-auto gap-6 lg:gap-0">
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent text-[8px] lg:text-[10px] uppercase tracking-widest font-black mb-3">
               🛒 Shop
             </div>
-            <h1 className="text-3xl font-black">Armeria</h1>
-            <p className="text-muted text-sm mt-1">Spendi i tuoi Credits. Personalizza. Domina.</p>
+            <h1 className="text-3xl lg:text-4xl font-black uppercase italic tracking-tighter leading-none">Armeria <span className="text-white">Regale</span></h1>
+            <p className="text-muted text-[10px] lg:text-sm mt-2">Spendi i tuoi Credits. Personalizza. Domina.</p>
           </div>
-          <div className="card px-6 py-4 text-center border-warning/30" style={{ background: 'rgba(245,158,11,0.08)' }}>
-            <div className="text-2xl font-black text-warning">{currency}</div>
-            <div className="text-xs text-muted uppercase tracking-wider mt-0.5">Credits</div>
+          <div className="card px-6 lg:px-8 py-3 lg:py-4 text-center border-accent/30 bg-accent/5 shadow-[0_0_30px_rgba(251,191,36,0.1)]">
+            <div className="text-xl lg:text-3xl font-black text-accent italic">{currency.toLocaleString()}</div>
+            <div className="text-[8px] lg:text-[10px] text-muted uppercase tracking-widest mt-0.5 font-bold">Credits Disponibili</div>
           </div>
         </div>
       </div>
 
       {/* Notification toast */}
       {notification && (
-        <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-medium shadow-xl fade-in ${
-          notification.ok ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400" : "bg-danger/20 border border-danger/40 text-danger"
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-[10px] lg:text-sm font-black uppercase tracking-widest shadow-xl animate-in fade-in slide-in-from-top-4 ${
+          notification.ok ? "bg-accent/20 border border-accent/40 text-accent" : "bg-danger/20 border border-danger/40 text-danger"
         }`}>
           {notification.text}
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-8 pb-16">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 pb-20">
         {/* Category Filter */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8 justify-center lg:justify-start">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeCategory === cat.id
-                  ? "bg-accent text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]"
-                  : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground"
+                  ? "bg-accent text-black shadow-[0_0_15px_rgba(251,191,36,0.3)]"
+                  : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground border border-white/5"
               }`}
             >
               {cat.emoji} {cat.label}
@@ -203,7 +203,7 @@ export default function ShopPage() {
         </div>
 
         {/* Items Grid */}
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {filtered.map(item => {
             const owned = purchasedItems.includes(item.id);
             const canAfford = currency >= item.cost;
@@ -211,58 +211,58 @@ export default function ShopPage() {
             return (
               <div
                 key={item.id}
-                className={`card p-5 flex flex-col gap-4 transition-all relative overflow-hidden ${
+                className={`card p-6 flex flex-col gap-4 transition-all relative overflow-hidden group ${
                   item.comingSoon
                     ? "opacity-50 cursor-not-allowed"
                     : owned
-                    ? "border-emerald-500/30"
-                    : "card-hover cursor-pointer"
+                    ? "border-accent/30 bg-accent/5"
+                    : "card-hover cursor-pointer border-white/5"
                 }`}
                 onClick={() => !item.comingSoon && !owned && handleBuy(item)}
               >
                 {/* Coming soon badge */}
                 {item.comingSoon && (
-                  <div className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-muted/20 text-muted uppercase tracking-wider">
+                  <div className="absolute top-3 right-3 text-[8px] px-2 py-0.5 rounded-full bg-white/10 text-muted uppercase tracking-widest font-black">
                     Presto
                   </div>
                 )}
 
                 {/* Owned badge */}
                 {owned && (
-                  <div className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
+                  <div className="absolute top-3 right-3 text-[8px] px-2 py-0.5 rounded-full bg-accent text-black uppercase tracking-widest font-black shadow-lg">
                     ✓ Tuo
                   </div>
                 )}
 
                 {/* Emoji icon */}
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
-                  style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center text-3xl lg:text-4xl transition-transform group-hover:scale-110"
+                  style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)' }}>
                   {item.emoji}
                 </div>
 
-                <div className="flex-1">
-                  <div className="font-bold text-sm mb-1">{item.name}</div>
-                  <div className="text-xs text-muted leading-relaxed">{item.description}</div>
+                <div className="flex-1 space-y-2">
+                  <div className="font-black italic uppercase text-base lg:text-lg tracking-tight leading-tight">{item.name}</div>
+                  <div className="text-[10px] lg:text-xs text-muted leading-relaxed font-medium">{item.description}</div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className={`text-lg font-black ${canAfford ? "text-warning" : "text-muted"}`}>
-                    {item.cost} <span className="text-xs font-normal text-muted">CR</span>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <div className={`text-xl lg:text-2xl font-black italic ${canAfford ? "text-accent" : "text-muted"}`}>
+                    {item.cost.toLocaleString()} <span className="text-[10px] lg:text-xs font-normal text-muted">CR</span>
                   </div>
 
                   {!item.comingSoon && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleBuy(item); }}
                       disabled={owned || !canAfford}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      className={`px-4 py-2 lg:py-2.5 rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all ${
                         owned
-                          ? "bg-emerald-500/15 text-emerald-400 cursor-default"
+                          ? "bg-accent/10 text-accent cursor-default border border-accent/20"
                           : canAfford
-                          ? "bg-accent text-white hover:bg-accent-hover shadow-[0_0_12px_rgba(99,102,241,0.3)]"
-                          : "bg-white/5 text-muted cursor-not-allowed"
+                          ? "btn-primary shadow-lg shadow-accent/20"
+                          : "bg-white/5 text-muted cursor-not-allowed border border-white/5"
                       }`}
                     >
-                      {owned ? "Acquistato" : canAfford ? "Acquista" : "Insufficiente"}
+                      {owned ? "Acquistato" : canAfford ? "Acquista" : "Mancano Credits"}
                     </button>
                   )}
                 </div>
