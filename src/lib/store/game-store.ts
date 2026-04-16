@@ -172,7 +172,7 @@ export const useGameStore = create<GameState>((set, get) => ({
               badgeId: profile.badge_id || "badge_lightning",
               purchasedItems: profile.purchased_items || []
             });
-          } else {
+          } else if (data.session?.user) {
             // Fallback for existing users without a profile
             const { data: newUserProfile } = await supabase.from('profiles').insert({
               id: data.session.user.id,
