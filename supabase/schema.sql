@@ -1,4 +1,5 @@
 -- Supabase Schema for Supercalcio Multiplayer
+DROP TABLE IF EXISTS public.matches, public.squads, public.profiles CASCADE;
 
 -- 1. Profiles (extends auth.users)
 CREATE TABLE public.profiles (
@@ -59,8 +60,38 @@ CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR
 CREATE POLICY "Public squads are viewable by everyone." ON public.squads FOR SELECT USING (true);
 
 CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can insert own squad." ON public.squads FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own squad." ON public.squads FOR UPDATE USING (auth.uid() = user_id);
 
 CREATE POLICY "Matches are viewable by everyone." ON public.matches FOR SELECT USING (true);
 CREATE POLICY "Authenticated users can insert matches." ON public.matches FOR INSERT WITH CHECK (auth.uid() = home_user_id);
+
+-- 4. User Players (Ownership & Upgrades)
+CREATE TABLE public.user_players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  player_id text NOT NULL,
+  experience integer DEFAULT 0,
+  level integer DEFAULT 1,
+  stats_bonus jsonb DEFAULT '{}',
+  created_at timestamp with time zone DEFAULT now(),
+  UNIQUE(user_id, player_id)
+);
+
+ALTER TABLE public.user_players ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own players." ON public.user_players FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own players." ON public.user_players FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own players." ON public.user_players FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- 5. Market Players
+CREATE TABLE public.market_players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id text NOT NULL,
+  cost integer NOT NULL,
+  base_level integer DEFAULT 1,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE public.market_players ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Market is viewable by everyone." ON public.market_players FOR SELECT USING (true);

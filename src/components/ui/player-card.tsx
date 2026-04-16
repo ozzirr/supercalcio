@@ -3,6 +3,7 @@
 import type { PlayerDefinition } from "@/types/player";
 import { StatBar } from "./stat-bar";
 import { tierLabel } from "@/utils/formatting";
+import Link from "next/link";
 
 type PlayerCardProps = {
   player: PlayerDefinition;
@@ -14,23 +15,29 @@ type PlayerCardProps = {
 const TIER_COLORS: Record<string, string> = {
   bronze: "text-orange-400 border-orange-400/30",
   silver: "text-gray-300 border-gray-300/30",
-  gold: "text-yellow-400 border-yellow-400/30",
+  gold: "text-accent border-accent/30",
   legendary: "text-purple-400 border-purple-400/30",
 };
 
 export function PlayerCard({ player, selected, onClick, compact }: PlayerCardProps) {
   const tierClass = TIER_COLORS[player.tier] ?? "text-muted border-border";
 
+  const CardWrapper = ({ children, className }: { children: React.ReactNode; className: string }) => {
+    if (onClick) {
+      return <button onClick={onClick} className={className}>{children}</button>;
+    }
+    return <Link href={`/players/${player.id}`} className={className}>{children}</Link>;
+  };
+
   if (compact) {
     return (
-      <button
-        onClick={onClick}
+      <CardWrapper
         className={`card card-hover p-3 w-full text-left transition-all ${
-          selected ? "border-accent shadow-[0_0_20px_rgba(99,102,241,0.15)]" : ""
+          selected ? "border-accent shadow-[0_0_20px_rgba(251,191,36,0.15)]" : "border-white/5"
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold shrink-0 relative overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold shrink-0 relative overflow-hidden border border-accent/30">
             {player.portrait ? (
               <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
             ) : (
@@ -38,77 +45,53 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold truncate">{player.name}</div>
-            <div className="text-xs text-muted capitalize">{player.roleTags[0]}</div>
-          </div>
-          <div className={`text-xs font-medium px-2 py-0.5 rounded border ${tierClass}`}>
-            {tierLabel(player.tier)}
+            <div className="font-black italic uppercase text-xs tracking-tight">{player.name}</div>
+            <div className="text-[10px] text-muted uppercase font-bold tracking-widest">{player.roleTags[0]}</div>
           </div>
         </div>
-      </button>
+      </CardWrapper>
     );
   }
 
   return (
-    <button
-      onClick={onClick}
-      className={`card card-hover p-5 w-full text-left transition-all ${
-        selected ? "border-accent shadow-[0_0_20px_rgba(99,102,241,0.15)]" : ""
+    <CardWrapper
+      className={`card card-hover p-0 w-full text-left transition-all overflow-hidden border-2 ${
+        selected ? "border-accent shadow-[0_0_30px_rgba(251,191,36,0.15)]" : "border-white/5"
       }`}
     >
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xl font-bold shrink-0 relative overflow-hidden">
-          {player.portrait ? (
-            <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
-          ) : (
-            player.name[0]
-          )}
-        </div>
-        <div className="flex-1 min-w-0 space-y-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold">{player.name}</span>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded border ${tierClass}`}>
-                {tierLabel(player.tier)}
-              </span>
+      <div className="relative aspect-[4/5] overflow-hidden">
+        <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
+        
+        <div className="absolute bottom-0 inset-x-0 p-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="text-2xl font-black italic uppercase tracking-tighter text-accent leading-none">{player.name}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted mt-1">{player.roleTags[0]}</div>
             </div>
-            <div className="text-sm text-muted capitalize">
-              {player.archetype} — {player.roleTags.join(", ")}
+            <div className={`text-[10px] font-black px-2 py-0.5 rounded border ${tierClass} uppercase`}>
+              {tierLabel(player.tier)}
             </div>
           </div>
-
-          <div className="space-y-1.5">
-            <StatBar label="PAC" value={player.stats.pace} />
-            <StatBar label="SHO" value={player.stats.shooting} />
-            <StatBar label="PAS" value={player.stats.passing} />
-            <StatBar label="DEF" value={player.stats.defense} />
-            <StatBar label="PHY" value={player.stats.physical} />
-            {player.roleTags.includes("goalkeeper") && (
-              <StatBar label="GK" value={player.stats.goalkeeping} />
-            )}
-          </div>
-
-          <div className="pt-2 space-y-1 text-xs">
-            <div>
-              <span className="text-muted">Passive: </span>
-              <span className="text-emerald-400">{player.passive.name}</span>
-              <span className="text-muted"> — {player.passive.description}</span>
-            </div>
-            <div>
-              <span className="text-muted">Skill: </span>
-              <span className="text-blue-400">{player.activeSkill.name}</span>
-              <span className="text-muted"> — {player.activeSkill.description}</span>
-            </div>
-            <div>
-              <span className="text-muted">Ultimate: </span>
-              <span className="text-purple-400">{player.ultimate.name}</span>
-              <span className="text-muted"> — {player.ultimate.description}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-muted italic">{player.flavorText}</p>
         </div>
       </div>
-    </button>
+      
+      <div className="p-4 space-y-3 bg-surface border-t border-white/5">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="text-center">
+            <div className="text-[10px] text-muted font-bold uppercase">PAC</div>
+            <div className="font-black text-white italic">{player.stats.pace}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] text-muted font-bold uppercase">SHO</div>
+            <div className="font-black text-white italic">{player.stats.shooting}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] text-muted font-bold uppercase">PAS</div>
+            <div className="font-black text-white italic">{player.stats.passing}</div>
+          </div>
+        </div>
+      </div>
+    </CardWrapper>
   );
 }

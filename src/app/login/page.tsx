@@ -51,69 +51,148 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center pt-16 px-4">
-      <div className="card w-full max-w-md p-8 animate-in shadow-[0_0_50px_rgba(99,102,241,0.15)] relative overflow-hidden">
-        {/* Glow effect back */}
-        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-gradient-to-br from-accent/20 to-transparent opacity-20 pointer-events-none rounded-full blur-3xl"></div>
-
-        <div className="relative z-10 text-center mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-wider mb-2">Supercalcio</h1>
-          <p className="text-muted text-sm px-4">
-            {isLogin ? "Welcome back to the Arena." : "Create your ultimate squad."}
-          </p>
+    <div className="flex-1 flex flex-col md:flex-row min-h-screen overflow-hidden">
+      {/* Left Column: Game Preview & Hero */}
+      <div className="relative flex-1 hidden md:flex flex-col items-center justify-center p-12 overflow-hidden">
+        {/* Cinematic Background */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/hero-bg.png" 
+            alt="Futuristic Arena" 
+            className="w-full h-full object-cover opacity-60 scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-          {error && (
-            <div className="p-3 rounded bg-danger/10 text-danger border border-danger/30 text-sm text-center">
-              {error}
-            </div>
-          )}
-
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-2xl space-y-12 mb-12">
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-muted mb-2 font-semibold">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                className="w-full px-4 py-3 bg-black/40 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent focus:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-muted mb-2 font-semibold">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-3 bg-black/40 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent focus:shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-all"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <h1 className="text-7xl font-black uppercase tracking-tighter leading-none italic">
+              Super<span className="text-accent">calcio</span>
+            </h1>
+            <p className="text-xl text-foreground/80 font-medium tracking-tight max-w-lg leading-relaxed">
+              Domina l&apos;arena tattica nel primo simulatore di calcio cyberpunk 5v5. 
+              Colleziona potenziamenti, sfida i manager globali e scala la classifica.
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full btn-primary py-3 relative overflow-hidden group"
-          >
-            <span className="relative z-10">{loading ? "Processing..." : isLogin ? "Enter Arena" : "Join Now"}</span>
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
-          </button>
-        </form>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-xl">🧠</div>
+              <div>
+                <div className="font-bold text-sm uppercase tracking-wide">Tactical Simulation</div>
+                <p className="text-xs text-muted leading-tight">Gestisci formazione e strategie in tempo reale.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center text-xl">💰</div>
+              <div>
+                <div className="font-bold text-sm uppercase tracking-wide">Global Shop</div>
+                <p className="text-xs text-muted leading-tight">Acquista skin, arene e potenziamenti esclusivi.</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div className="mt-6 text-center relative z-10">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-xs text-muted hover:text-accent transition-colors"
-          >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
-          </button>
+        {/* Floating Player Cards Preview */}
+        <div className="relative z-10 w-full max-w-2xl flex gap-8 py-8 h-48 pointer-events-none">
+          <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float border-accent/40 bg-accent/10">
+            <div className="w-20 h-20 rounded-full bg-accent/20 overflow-hidden">
+              <img src="/portraits/aegis.png" alt="Aegis" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-sm">Aegis</div>
+              <div className="text-[10px] uppercase text-muted">Goalkeeper</div>
+            </div>
+          </div>
+          <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float-delayed border-danger/40 bg-danger/10 translate-y-12">
+            <div className="w-20 h-20 rounded-full bg-danger/20 overflow-hidden">
+              <img src="/portraits/blaze.png" alt="Blaze" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-sm">Blaze</div>
+              <div className="text-[10px] uppercase text-muted">Striker</div>
+            </div>
+          </div>
+          <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float border-warning/40 bg-warning/10">
+            <div className="w-20 h-20 rounded-full bg-warning/20 overflow-hidden">
+              <img src="/portraits/titan.png" alt="Titan" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-sm">Titan</div>
+              <div className="text-[10px] uppercase text-muted">Defender</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Auth Form */}
+      <div className="relative z-20 w-full md:w-[450px] flex items-center justify-center p-8 bg-background border-l border-white/5">
+        <div className="w-full max-w-sm space-y-8 animate-in">
+          {/* Logo visible on mobile only */}
+          <div className="md:hidden text-center mb-12">
+            <h1 className="text-4xl font-black italic tracking-tighter">Super<span className="text-accent">calcio</span></h1>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black uppercase tracking-tight">
+              {isLogin ? "Bentornato" : "Crea Account"}
+            </h2>
+            <p className="text-muted text-sm">
+              {isLogin ? "Inserisci le tue credenziali per entrare nell'arena." : "Inizia oggi la tua scalata verso la gloria."}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-4 rounded-xl bg-danger/10 text-danger border border-danger/20 text-xs font-medium fade-in">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted font-bold ml-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground focus:outline-none focus:border-accent focus:bg-white/10 transition-all font-medium"
+                  placeholder="manager@supercalcio.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted font-bold ml-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground focus:outline-none focus:border-accent focus:bg-white/10 transition-all font-medium"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full btn-primary py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(99,102,241,0.3)] hover:shadow-[0_0_40px_rgba(99,102,241,0.5)] transition-all"
+            >
+              {loading ? "Caricamento..." : isLogin ? "Entra nell'Arena" : "Unisciti Ora"}
+            </button>
+          </form>
+
+          <div className="pt-4 text-center">
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-xs text-muted hover:text-accent transition-colors font-medium"
+            >
+              {isLogin ? "Non hai un account? Registrati gratuitamente" : "Hai già un account? Effettua il login"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

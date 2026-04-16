@@ -26,6 +26,7 @@ type GameState = {
   purchasedItems: string[];
   teamName: string;
   badgeId: string;
+  ownedPlayers: any[]; // User's roster with levels and bonuses
 
   // Actions
   setLineup: (lineup: LineupSlot[]) => void;
@@ -42,6 +43,8 @@ type GameState = {
   setMatchInProgress: (inProgress: boolean) => void;
   addRewards: (xp: number, currency: number) => void;
   buyItem: (itemId: string, cost: number) => boolean;
+  buyPlayer: (playerId: string, cost: number) => Promise<boolean>;
+  upgradePlayer: (playerId: string, stat: string, cost: number) => Promise<boolean>;
   updateProfile: (updates: { teamName?: string; badgeId?: string }) => Promise<void>;
   initializeUser: () => void;
   logout: () => void;
@@ -64,6 +67,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   purchasedItems: [],
   teamName: "SC Squad",
   badgeId: "badge_lightning",
+  ownedPlayers: [],
 
   setLineup: (lineup) => set({ lineup }),
 
@@ -145,6 +149,55 @@ export const useGameStore = create<GameState>((set, get) => ({
     return true;
   },
 
+  buyPlayer: async (playerId, cost) => {
+    const state = get();
+    if (state.currency < cost || !state.user) return false;
+
+    const { error } = await supabase.from('user_players').insert({
+      user_id: state.user.id,
+      player_id: playerId
+    });
+
+    if (error) return false;
+
+    const newCurrency = state.currency - cost;
+    set({ currency: newCurrency });
+    await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
+    
+    // Refresh owned players
+    const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+    if (data) set({ ownedPlayers: data });
+
+    return true;
+  },
+
+  upgradePlayer: async (playerId, stat, cost) => {
+    const state = get();
+    if (state.currency < cost || !state.user) return false;
+
+    const playerRecord = state.ownedPlayers.find(p => p.player_id === playerId);
+    if (!playerRecord) return false;
+
+    const currentBonus = playerRecord.stats_bonus || {};
+    const newBonus = { ...currentBonus, [stat]: (currentBonus[stat] || 0) + 1 };
+
+    const { error } = await supabase.from('user_players').update({
+      stats_bonus: newBonus
+    }).eq('user_id', state.user.id).eq('player_id', playerId);
+
+    if (error) return false;
+
+    const newCurrency = state.currency - cost;
+    set({ currency: newCurrency });
+    await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
+
+    // Refresh owned players
+    const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+    if (data) set({ ownedPlayers: data });
+
+    return true;
+  },
+
   updateProfile: async (updates) => {
     const state = get();
     if (!state.user || !supabase) return;
@@ -191,6 +244,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
         supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad }: { data: any }) => {
           if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
+        });
+        supabase.from('user_players').select('*').eq('user_id', data.session.user.id).then(({ data: players }) => {
+          if (players) set({ ownedPlayers: players });
         });
       }
     });

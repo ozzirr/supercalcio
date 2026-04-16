@@ -31,38 +31,38 @@ export function ProfileSetup() {
   if (!isDefault) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="card w-full max-w-md p-8 space-y-8 shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="card w-full max-w-md p-8 space-y-8 shadow-[0_0_80px_rgba(251,191,36,0.1)] border-accent/20">
         <div className="text-center">
-          <div className="text-4xl mb-4">🏆</div>
-          <h2 className="text-2xl font-black uppercase tracking-tight">Benvenuto Manager</h2>
-          <p className="text-muted text-sm mt-2">Personalizza la tua squadra per iniziare la scalata della classifica.</p>
+          <div className="text-5xl mb-6">🏅</div>
+          <h2 className="text-3xl font-black uppercase tracking-tighter italic italic">KINGS<span className="text-accent">LEAGUE</span></h2>
+          <p className="text-muted text-xs uppercase tracking-widest font-bold mt-2">Crea l&apos;identità del tuo team</p>
         </div>
 
         <div className="space-y-6">
           <div>
-            <label className="block text-xs uppercase tracking-widest text-muted font-bold mb-2">Nome Squadra</label>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted font-black mb-2 ml-1">Nome Squadra</label>
             <input
               type="text"
               maxLength={20}
-              className="w-full px-4 py-3 bg-white/5 border border-border rounded-xl focus:border-accent focus:outline-none transition-all font-bold tracking-wide"
-              placeholder="Esempio: Milano Tech"
+              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-accent focus:bg-white/10 focus:outline-none transition-all font-black uppercase italic tracking-tight text-lg"
+              placeholder="Esempio: REAL MILANO"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-widest text-muted font-bold mb-3">Scegli il tuo Stemma</label>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted font-black mb-3 ml-1">Scegli il tuo Stemma</label>
             <div className="grid grid-cols-5 gap-3">
               {badges.map((b) => (
                 <button
                   key={b.id}
                   onClick={() => setSelectedBadge(b.id)}
-                  className={`w-full aspect-square rounded-xl flex items-center justify-center text-2xl transition-all ${
+                  className={`w-full aspect-square rounded-2xl flex items-center justify-center text-2xl transition-all ${
                     selectedBadge === b.id 
-                    ? "bg-accent shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-110" 
-                    : "bg-white/5 border border-border hover:border-accent/40"
+                    ? "bg-accent text-black shadow-[0_0_20px_rgba(251,191,36,0.5)] scale-110" 
+                    : "bg-white/5 border border-white/10 hover:border-accent/40"
                   }`}
                 >
                   {b.emoji}
@@ -74,9 +74,9 @@ export function ProfileSetup() {
           <button
             onClick={handleSave}
             disabled={loading || !name.trim()}
-            className="w-full btn-primary py-4 text-sm font-black uppercase tracking-widest disabled:opacity-50"
+            className="w-full btn-primary py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl disabled:opacity-30"
           >
-            {loading ? "Salvataggio..." : "Salva e Inizia"}
+            {loading ? "Registrazione..." : "Inizia il Matchday →"}
           </button>
         </div>
       </div>
