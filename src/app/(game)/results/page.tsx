@@ -63,7 +63,7 @@ export default function ResultsPage() {
         <div className="card p-6">
           <h3 className="font-semibold text-muted uppercase text-sm tracking-wider mb-3">Match Highlights</h3>
           <div className="text-sm space-y-2 max-h-64 overflow-y-auto pr-2">
-            {currentMatch.timeline.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").map((e, idx) => (
+            {currentMatch.timeline.events.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").map((e, idx) => (
               <div key={idx} className="flex gap-3 items-center">
                 <span className="text-muted font-mono text-xs w-10">{tickToMatchTime(e.tick, 90)}</span>
                 <span className={e.type === "goal" ? "text-emerald-400 font-bold" : "text-foreground"}>
@@ -71,7 +71,7 @@ export default function ResultsPage() {
                 </span>
               </div>
             ))}
-            {currentMatch.timeline.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").length === 0 && (
+            {currentMatch.timeline.events.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").length === 0 && (
               <div className="text-muted text-center italic py-2">No major highlights this match.</div>
             )}
           </div>
