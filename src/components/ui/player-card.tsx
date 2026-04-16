@@ -12,15 +12,15 @@ type PlayerCardProps = {
   compact?: boolean;
 };
 
-const TIER_COLORS: Record<string, string> = {
-  bronze: "text-orange-400 border-orange-400/30",
-  silver: "text-gray-300 border-gray-300/30",
-  gold: "text-accent border-accent/30",
-  legendary: "text-purple-400 border-purple-400/30",
+const TIER_STYLES: Record<string, { label: string, container: string }> = {
+  bronze: { label: "text-orange-400 border-orange-400/40", container: "border-orange-400/30 bg-orange-400/5" },
+  silver: { label: "text-gray-300 border-gray-300/40", container: "border-gray-300/30 bg-gray-300/5" },
+  gold: { label: "text-yellow-400 border-yellow-400/40", container: "border-yellow-400/40 bg-yellow-400/5" },
+  legendary: { label: "text-purple-400 border-purple-400/40", container: "border-purple-400/40 bg-purple-400/5" },
 };
 
 export function PlayerCard({ player, selected, onClick, compact }: PlayerCardProps) {
-  const tierClass = TIER_COLORS[player.tier] ?? "text-muted border-border";
+  const tierStyle = TIER_STYLES[player.tier] ?? { label: "text-muted border-border", container: "border-white/5" };
 
   const CardWrapper = ({ children, className }: { children: React.ReactNode; className: string }) => {
     if (onClick) {
@@ -33,7 +33,7 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
     return (
       <CardWrapper
         className={`card card-hover p-3 w-full text-left transition-all ${
-          selected ? "border-accent shadow-[0_0_20px_rgba(251,191,36,0.15)]" : "border-white/5"
+          selected ? "border-accent shadow-[0_0_20px_rgba(251,191,36,0.15)]" : tierStyle.container
         }`}
       >
         <div className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
   return (
     <CardWrapper
       className={`card card-hover p-0 w-full text-left transition-all overflow-hidden border-2 ${
-        selected ? "border-accent shadow-[0_0_30px_rgba(251,191,36,0.15)]" : "border-white/5"
+        selected ? "border-accent shadow-[0_0_30px_rgba(251,191,36,0.15)]" : tierStyle.container
       }`}
     >
       <div className="relative aspect-[4/5] overflow-hidden">
@@ -69,7 +69,7 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
               <div className="text-2xl font-black italic uppercase tracking-tighter text-accent leading-none">{player.name}</div>
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted mt-1">{player.roleTags[0]}</div>
             </div>
-            <div className={`text-[10px] font-black px-2 py-0.5 rounded border ${tierClass} uppercase`}>
+            <div className={`text-[10px] font-black px-2 py-0.5 rounded border ${tierStyle.label} uppercase bg-background/50 backdrop-blur-sm`}>
               {tierLabel(player.tier)}
             </div>
           </div>

@@ -32,7 +32,16 @@ export default function MercatoPage() {
   }, []);
 
   const handleBuy = async (player: any) => {
-    if (currency < player.cost) return;
+    if (ownedPlayers.length >= 10) {
+      setNotification(`⚠️ Roster pieno (Max 10 giocatori). Vendi qualcuno per acquistare.`);
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    if (currency < player.cost) {
+      setNotification(`⚠️ Crediti insufficienti.`);
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
     const ok = await buyPlayer(player.player_id, player.cost);
     if (ok) {
       setNotification(`✅ Acquistato: ${player.player_id}!`);
@@ -98,10 +107,10 @@ export default function MercatoPage() {
       )}
 
       <div className="max-w-6xl mx-auto px-4 lg:px-8 pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-5">
           {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card h-48 animate-pulse bg-white/5 border-white/5"></div>
+            Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="card h-64 animate-pulse bg-white/5 border-white/5"></div>
             ))
           ) : (
             marketPlayers.map((item, idx) => {
@@ -110,29 +119,31 @@ export default function MercatoPage() {
               const owned = isOwned(item.player_id);
 
               return (
-                <div key={idx} className={`relative group ${owned ? "opacity-60" : ""}`}>
-                  <PlayerCard player={base} />
+                <div key={idx} className="flex flex-col gap-2 relative">
+                  <div className={`transition-opacity ${owned ? "opacity-70" : ""}`}>
+                    <PlayerCard player={base} />
+                  </div>
                   
-                  <div className={`absolute inset-0 bg-black/60 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 backdrop-blur-sm rounded-[12px] ${owned ? "lg:opacity-100" : ""}`}>
+                  <div className="card p-2 xl:p-3 border-white/5 bg-surface/50 backdrop-blur-md mt-auto">
                     {owned ? (
-                      <div className="w-full space-y-3 lg:space-y-4 text-center">
-                        <div className="text-accent font-black uppercase text-base lg:text-xl italic tracking-tighter">GIA IN ROSA</div>
+                      <div className="flex flex-col gap-1.5 text-center">
+                        <div className="text-[9px] xl:text-[10px] text-accent font-black uppercase tracking-widest">In Rosa</div>
                         <button
                           onClick={() => handleSell(item, base)}
-                          className="w-full py-2 bg-danger/20 text-danger border border-danger/40 font-black uppercase text-[10px] lg:text-xs tracking-widest rounded-xl hover:bg-danger/30 transition-all shadow-lg"
+                          className="w-full py-1.5 xl:py-2 bg-danger/20 text-danger border border-danger/40 font-black uppercase text-[10px] xl:text-xs tracking-widest rounded-lg hover:bg-danger/30 transition-all shadow-md"
                         >
-                          Vendi: +{Math.floor(item.cost * 0.6)} CR
+                          Vendi (+{Math.floor(item.cost * 0.6)} CR)
                         </button>
                       </div>
                     ) : (
-                      <div className="w-full space-y-3 lg:space-y-4 text-center">
-                        <div className="text-xl lg:text-3xl font-black italic text-white">{item.cost} <span className="text-[10px] lg:text-xs font-normal">CR</span></div>
+                      <div className="flex flex-col gap-1.5 text-center">
+                        <div className="text-sm xl:text-lg font-black italic text-white leading-none">{item.cost} <span className="text-[8px] xl:text-[10px] font-normal tracking-widest">CR</span></div>
                         <button
                           onClick={() => handleBuy(item)}
-                          disabled={currency < item.cost}
-                          className="w-full py-2.5 lg:py-3 bg-accent text-black font-black uppercase text-[10px] lg:text-xs tracking-widest rounded-xl hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          disabled={currency < item.cost || ownedPlayers.length >= 10}
+                          className="w-full py-1.5 xl:py-2 bg-accent text-black font-black uppercase text-[10px] xl:text-xs tracking-widest rounded-lg hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
-                          Acquista Ora
+                          Acquista
                         </button>
                       </div>
                     )}
