@@ -170,38 +170,34 @@ export default function MatchPage() {
           </div>
 
           {/* HUD */}
-          <div className="flex items-center justify-between px-6 py-3 z-10 relative">
+          <div className="flex items-center justify-between px-6 py-3 z-10 relative" style={{background: 'linear-gradient(180deg, rgba(5,7,14,0.95) 0%, transparent 100%)'}}>
             {/* Team label */}
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#6366f1]" />
-              <span className="text-sm font-semibold text-foreground capitalize">{playstyle.replace(/_/g, " ")}</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-accent" style={{boxShadow: '0 0 8px #6366f1'}} />
+              <span className="text-xs font-semibold text-foreground/80 capitalize tracking-wide">{playstyle.replace(/_/g, " ")}</span>
             </div>
 
             {/* Scoreboard */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8">
               <div className="text-right">
-                <div className="text-xs text-muted uppercase tracking-widest">You</div>
-                <div className="text-4xl font-black tabular-nums text-foreground">{score.home}</div>
+                <div className="text-[10px] text-accent/70 uppercase tracking-widest font-mono mb-0.5">You</div>
+                <div className="text-5xl font-black tabular-nums text-white" style={{textShadow: '0 0 20px rgba(99,102,241,0.5)'}}>{score.home}</div>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="text-xs text-muted uppercase tracking-widest font-mono">{tickToMatchTime(tick, totalTicks)}</div>
-                <div className="text-muted text-lg">—</div>
-                {!phaserReady && (
-                  <div className="text-[10px] text-muted animate-pulse">Loading arena...</div>
-                )}
+              <div className="flex flex-col items-center">
+                <div className="text-xs text-foreground/40 font-mono tabular-nums">{tickToMatchTime(tick, totalTicks)}</div>
+                <div className="text-foreground/30 text-base my-0.5">vs</div>
+                {!phaserReady && <div className="text-[9px] text-muted animate-pulse">Loading...</div>}
               </div>
               <div className="text-left">
-                <div className="text-xs text-muted uppercase tracking-widest">CPU</div>
-                <div className="text-4xl font-black tabular-nums text-muted">{score.away}</div>
+                <div className="text-[10px] text-rose-400/70 uppercase tracking-widest font-mono mb-0.5">CPU</div>
+                <div className="text-5xl font-black tabular-nums text-rose-400">{score.away}</div>
               </div>
             </div>
 
-            {/* Status pill */}
+            {/* Status */}
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isFinished ? "bg-muted" : "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"}`} />
-              <span className="text-xs text-muted uppercase tracking-widest font-mono">
-                {isFinished ? "FT" : "Live"}
-              </span>
+              <span className={`w-2 h-2 rounded-full ${isFinished ? 'bg-muted' : 'bg-emerald-400 animate-pulse'}`} style={isFinished ? {} : {boxShadow: '0 0 8px #34d399'}} />
+              <span className="text-[10px] text-muted uppercase tracking-widest font-mono">{isFinished ? 'FT' : 'Live'}</span>
             </div>
           </div>
 
