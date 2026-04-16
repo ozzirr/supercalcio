@@ -97,7 +97,7 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
                   <div className="text-4xl font-black italic text-white">{value}</div>
                 </div>
                 
-                <StatBar value={value} />
+                <StatBar value={value} label={stat} />
 
                 <button
                   onClick={() => handleUpgrade(stat)}
