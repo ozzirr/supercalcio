@@ -12,6 +12,7 @@ import { STARTER_PLAYERS } from "@/content/players";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { EventBus } from "@/game/EventBus";
+import { supabase } from "@/lib/supabase/client";
 
 const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), { ssr: false });
 
