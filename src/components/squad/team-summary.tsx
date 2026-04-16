@@ -1,7 +1,6 @@
 "use client";
 
 import type { PlayerDefinition, StatBlock, RoleTag } from "@/types/player";
-import { StatBar } from "@/components/ui/stat-bar";
 
 type TeamSummaryProps = {
   players: PlayerDefinition[];
@@ -33,73 +32,73 @@ function averageStats(players: PlayerDefinition[]): StatBlock {
   };
 }
 
-function roleCoverage(players: PlayerDefinition[]) {
-  const roles = new Set(players.flatMap((p) => p.roleTags));
-  const required: RoleTag[] = ["goalkeeper", "attacker", "defender"];
-  return required.map((r) => ({ role: r, covered: roles.has(r) }));
+function getStatColor(value: number) {
+  if (value >= 75) return "text-emerald-400";
+  if (value >= 60) return "text-amber-400";
+  return "text-rose-400";
 }
 
 export function TeamSummary({ players }: TeamSummaryProps) {
   const avg = averageStats(players);
-  const coverage = roleCoverage(players);
-  const overallRating = Math.round(
-    (avg.pace + avg.shooting + avg.passing + avg.defense + avg.physical) / 5
-  );
+  const overallRating = players.length > 0
+    ? Math.round((avg.pace + avg.shooting + avg.passing + avg.defense + avg.physical) / 5)
+    : 0;
+
+  const roles = new Set(players.flatMap((p) => p.roleTags));
+  const required: RoleTag[] = ["goalkeeper", "attacker", "defender"];
+  const coverage = required.map((r) => ({ role: r, covered: roles.has(r) }));
+
+  const stats = [
+    { label: "PAC", value: avg.pace },
+    { label: "SHO", value: avg.shooting },
+    { label: "PAS", value: avg.passing },
+    { label: "DEF", value: avg.defense },
+    { label: "PHY", value: avg.physical },
+  ];
+
+  if (players.length === 0) {
+    return (
+      <div className="py-3 text-center text-muted text-xs italic">
+        Add players to see team stats
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Overall rating */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold uppercase tracking-wider text-muted">Team Rating</span>
-        <span className="text-2xl font-black text-accent">{players.length > 0 ? overallRating : "—"}</span>
-      </div>
-
-      {/* Average stats */}
-      {players.length > 0 && (
-        <div className="space-y-1.5">
-          <StatBar label="PAC" value={avg.pace} />
-          <StatBar label="SHO" value={avg.shooting} />
-          <StatBar label="PAS" value={avg.passing} />
-          <StatBar label="DEF" value={avg.defense} />
-          <StatBar label="PHY" value={avg.physical} />
+    <div className="card p-4 mt-4">
+      <div className="flex items-center gap-4">
+        {/* Overall Rating Badge */}
+        <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-accent/10 border border-accent/25 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+          <span className="text-2xl font-black text-accent leading-none">{overallRating}</span>
+          <span className="text-[9px] uppercase tracking-widest text-muted mt-0.5">OVR</span>
         </div>
-      )}
 
-      {/* Role coverage */}
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Role Coverage</div>
-        <div className="flex gap-2">
+        {/* Stat Pills */}
+        <div className="flex-1 grid grid-cols-5 gap-2">
+          {stats.map(({ label, value }) => (
+            <div key={label} className="flex flex-col items-center gap-1">
+              <span className={`text-xl font-black leading-none ${getStatColor(value)}`}>{value}</span>
+              <span className="text-[9px] uppercase tracking-widest text-muted">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Role badges */}
+        <div className="flex-shrink-0 flex flex-col gap-1.5">
           {coverage.map((c) => (
             <span
               key={c.role}
-              className={`text-xs px-2 py-1 rounded-full border capitalize ${
+              className={`text-[9px] px-2 py-0.5 rounded-full border font-semibold uppercase tracking-wider ${
                 c.covered
-                  ? "border-success/40 text-success bg-success/10"
-                  : "border-border text-muted"
+                  ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                  : "border-border text-muted/40 line-through"
               }`}
             >
-              {c.role}
+              {c.role.slice(0, 3)}
             </span>
           ))}
         </div>
       </div>
-
-      {/* Archetype mix */}
-      {players.length > 0 && (
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Archetypes</div>
-          <div className="flex flex-wrap gap-1.5">
-            {players.map((p) => (
-              <span
-                key={p.id}
-                className="text-xs px-2 py-0.5 rounded bg-accent/10 text-accent capitalize"
-              >
-                {p.archetype}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

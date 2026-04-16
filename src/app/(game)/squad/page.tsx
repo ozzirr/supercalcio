@@ -252,17 +252,14 @@ export default function SquadPage() {
               ))}
             </div>
           </div>
+
+          {/* Team Summary — compact HUD bar */}
+          <TeamSummary players={squadPlayers} />
         </div>
       </div>
 
-      {/* Right panel: Player detail + Team summary */}
+      {/* Right panel: Player detail only */}
       <div className="w-80 border-l border-border flex flex-col overflow-y-auto">
-        {/* Team summary */}
-        <div className="p-4 border-b border-border">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Team Summary</h2>
-          <TeamSummary players={squadPlayers} />
-        </div>
-
         {/* Selected player */}
         <div className="flex-1 p-4">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">

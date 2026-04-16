@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { validateSquad } from "@/types/squad";
 import { MatchEngine } from "@/engine/match-engine";
@@ -17,71 +17,47 @@ const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), { ssr: 
 
 export default function MatchPage() {
   const router = useRouter();
-  
+
   const { lineup, availablePlayers, playstyle, stance, command, setStance, setCommand, setMatchResult, addRewards } = useGameStore();
   const validation = validateSquad(lineup, availablePlayers);
 
   const engineRef = useRef<MatchEngine | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const homeRosterRef = useRef<typeof STARTER_PLAYERS>([]);
+  const awayRosterRef = useRef<typeof STARTER_PLAYERS>([]);
 
   const [tick, setTick] = useState(0);
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isFinished, setIsFinished] = useState(false);
+  const [phaserReady, setPhaserReady] = useState(false);
 
   const totalTicks = 90;
 
+  // Build engine once on mount
   useEffect(() => {
-    if (!validation.valid) return;
+    if (!validation.valid || engineRef.current) return;
 
-    // Initialize the engine once
-    if (!engineRef.current) {
-      const homeRoster = lineup.map(l => availablePlayers.find(p => p.id === l.playerId)!);
-      
-      // For now, MVP: play against an identical but offset squad
-      const awayRoster = [...homeRoster].reverse();
+    const homeRoster = lineup.map(l => availablePlayers.find(p => p.id === l.playerId)!);
+    const awayRoster = [...homeRoster].reverse();
+    homeRosterRef.current = homeRoster;
+    awayRosterRef.current = awayRoster;
 
-      engineRef.current = new MatchEngine(
-        {
-          totalTicks,
-          halftimeTick: 45,
-          seed: generateSeed(),
-          homePlaystyle: playstyle,
-          awayPlaystyle: "counter_attack",
-          homeStance: stance,
-          awayStance: "balanced",
-          homeCommand: command,
-          awayCommand: "none",
-        },
-        homeRoster,
-        awayRoster
-      );
-
-      // Tell Phaser the rosters
-      EventBus.emit("init-match", { homeRoster, awayRoster });
-
-      // Start the game loop (1 second per tick for readable text feed)
-      intervalRef.current = setInterval(() => {
-        if (!engineRef.current) return;
-
-        const newEvents = engineRef.current.tick();
-        const state = engineRef.current.getState();
-
-        setTick(state.tick);
-        setScore({ home: state.homeScore, away: state.awayScore });
-        
-        if (newEvents.length > 0) {
-          setEvents(prev => [...prev, ...newEvents]);
-          newEvents.forEach(e => EventBus.emit("match-event", e));
-        }
-
-        if (state.phase === "finished") {
-          EventBus.emit("match-finished");
-          clearInterval(intervalRef.current!);
-          setIsFinished(true);
-        }
-      }, 500); // 500ms for slightly faster than 1 second per tick
-    }
+    engineRef.current = new MatchEngine(
+      {
+        totalTicks,
+        halftimeTick: 45,
+        seed: generateSeed(),
+        homePlaystyle: playstyle,
+        awayPlaystyle: "counter_attack",
+        homeStance: stance,
+        awayStance: "balanced",
+        homeCommand: command,
+        awayCommand: "none",
+      },
+      homeRoster,
+      awayRoster
+    );
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -89,12 +65,54 @@ export default function MatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validation.valid]);
 
-  // Keep scroll at bottom of feed
+  // Listen for Phaser scene ready, THEN init match
+  useEffect(() => {
+    const onSceneReady = () => {
+      setPhaserReady(true);
+      EventBus.emit("init-match", {
+        homeRoster: homeRosterRef.current,
+        awayRoster: awayRosterRef.current,
+      });
+    };
+
+    EventBus.on("current-scene-ready", onSceneReady);
+    return () => { EventBus.off("current-scene-ready", onSceneReady); };
+  }, []);
+
+  // Start game loop only when both engine and phaser are ready
+  useEffect(() => {
+    if (!phaserReady || !engineRef.current || intervalRef.current) return;
+
+    intervalRef.current = setInterval(() => {
+      if (!engineRef.current) return;
+
+      const newEvents = engineRef.current.tick();
+      const state = engineRef.current.getState();
+
+      setTick(state.tick);
+      setScore({ home: state.homeScore, away: state.awayScore });
+
+      if (newEvents.length > 0) {
+        setEvents(prev => [...prev, ...newEvents]);
+        newEvents.forEach(e => EventBus.emit("match-event", e));
+      }
+
+      if (state.phase === "finished") {
+        EventBus.emit("match-finished");
+        clearInterval(intervalRef.current!);
+        setIsFinished(true);
+      }
+    }, 500);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [phaserReady]);
+
+  // Auto-scroll feed
   const feedEndRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (feedEndRef.current) {
-      feedEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events]);
 
   if (!validation.valid) {
@@ -113,149 +131,179 @@ export default function MatchPage() {
 
   const handleStanceChange = (s: "balanced" | "aggressive" | "defensive") => {
     setStance(s);
-    if (engineRef.current) {
-      engineRef.current.intervene("home", { type: "stance_change", stance: s });
-    }
+    engineRef.current?.intervene("home", { type: "stance_change", stance: s });
   };
 
   const finishMatch = () => {
-    if (engineRef.current) {
-      // Create full dummy record and push to result
-      const matchOutcome = engineRef.current.getResult();
-      setMatchResult({
-        id: crypto.randomUUID(),
-        userId: "local",
-        squadId: "squad_1",
-        opponentSeed: 0,
-        result: matchOutcome.result,
-        playerStats: matchOutcome.playerStats,
-        rewards: { xp: 50, currency: 25 },
-        timeline: engineRef.current.getTimeline(),
-        createdAt: new Date().toISOString()
-      });
-      addRewards(50, 25);
-      router.push("/results");
-    }
+    if (!engineRef.current) return;
+    const matchOutcome = engineRef.current.getResult();
+    setMatchResult({
+      id: crypto.randomUUID(),
+      userId: "local",
+      squadId: "squad_1",
+      opponentSeed: 0,
+      result: matchOutcome.result,
+      playerStats: matchOutcome.playerStats,
+      rewards: { xp: 50, currency: 25 },
+      timeline: engineRef.current.getTimeline(),
+      createdAt: new Date().toISOString(),
+    });
+    addRewards(50, 25);
+    router.push("/results");
   };
 
+  const progress = (tick / totalTicks) * 100;
+
   return (
-    <div className="flex-1 flex flex-col pt-[72px]">
-      <div className="flex-1 flex items-center justify-center bg-surface p-6">
-        <div className="text-center space-y-6 w-full max-w-4xl flex flex-col h-full max-h-[70vh]">
-          
-          {/* HUD Scoreboard */}
-          <div className="flex items-center justify-center gap-8 text-sm">
-            <div className="card px-6 py-3 w-48 border-primary/20">
-              <span className="text-muted block text-xs mb-1">Playstyle</span>
-              <span className="capitalize font-medium text-primary">{playstyle.replace(/_/g, " ")}</span>
+    <div className="fixed inset-0 top-[57px] flex flex-col overflow-hidden">
+      {/* Main content: two columns — fills remaining height */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+
+        {/* Left: Arena — takes all available height */}
+        <div className="flex-1 flex flex-col bg-[#05070e] relative overflow-hidden min-h-0">
+          {/* Neon progress bar */}
+          <div className="h-0.5 w-full bg-border/30 absolute top-0 left-0 z-10">
+            <div
+              className="h-full bg-accent transition-all duration-500"
+              style={{ width: `${progress}%`, boxShadow: "0 0 12px #6366f1" }}
+            />
+          </div>
+
+          {/* HUD */}
+          <div className="flex items-center justify-between px-6 py-3 z-10 relative">
+            {/* Team label */}
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#6366f1]" />
+              <span className="text-sm font-semibold text-foreground capitalize">{playstyle.replace(/_/g, " ")}</span>
             </div>
-            <div className="card px-8 py-3 bg-card border-accent/20">
-             <div className="flex flex-col items-center">
-                <span className="text-muted text-xs uppercase tracking-wider mb-1">Score</span>
-                <span className="text-3xl font-black">{score.home} - {score.away}</span>
-             </div>
+
+            {/* Scoreboard */}
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-xs text-muted uppercase tracking-widest">You</div>
+                <div className="text-4xl font-black tabular-nums text-foreground">{score.home}</div>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-xs text-muted uppercase tracking-widest font-mono">{tickToMatchTime(tick, totalTicks)}</div>
+                <div className="text-muted text-lg">—</div>
+                {!phaserReady && (
+                  <div className="text-[10px] text-muted animate-pulse">Loading arena...</div>
+                )}
+              </div>
+              <div className="text-left">
+                <div className="text-xs text-muted uppercase tracking-widest">CPU</div>
+                <div className="text-4xl font-black tabular-nums text-muted">{score.away}</div>
+              </div>
             </div>
-            <div className="card px-6 py-3 w-48 border-primary/20">
-              <span className="text-muted block text-xs mb-1">Time</span>
-              <span className="font-medium text-primary text-lg">{tickToMatchTime(tick, totalTicks)}</span>
+
+            {/* Status pill */}
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isFinished ? "bg-muted" : "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"}`} />
+              <span className="text-xs text-muted uppercase tracking-widest font-mono">
+                {isFinished ? "FT" : "Live"}
+              </span>
             </div>
           </div>
 
-           {/* Phaser Arena */}
-           <div className="w-full max-w-3xl aspect-[2/1] rounded-xl border border-border bg-background flex items-center justify-center mx-auto shadow-xl relative mt-4">
-              <PhaserGame />
-           </div>
-
-           {/* Event Feed */}
-           <div className="flex-1 min-h-[200px] w-full max-w-3xl aspect-[3/1] rounded-xl border border-border bg-[#0a0f18] mx-auto p-4 flex flex-col shadow-inner mt-4">
-             <div className="w-full border-b border-border/50 pb-2 mb-2 flex justify-between text-xs text-muted font-mono uppercase tracking-wider">
-                <span>Match Feed</span>
-                <span>{isFinished ? "FT" : "Live"}</span>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto space-y-2 pr-2 text-left font-mono relative">
-                {events.map((e, idx) => {
-                  const isHome = e.team === "home";
-                  const isGoal = e.type === "goal";
-                  const isHalftime = e.type === "halftime" || e.type === "full_time";
-                  
-                  return (
-                    <div 
-                      key={`${e.tick}-${idx}`} 
-                      className={`text-sm p-2 rounded flex gap-3 ${
-                        isGoal ? "bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20" : 
-                        isHalftime ? "bg-accent/10 border-y border-accent/20 text-accent font-bold my-4 justify-center" : 
-                        isHome ? "text-primary-foreground" : "text-muted-foreground"
-                      }`}
-                    >
-                      {!isHalftime && (
-                        <span className="opacity-50 min-w-[50px] shrink-0">
-                          {tickToMatchTime(e.tick, totalTicks)}
-                        </span>
-                      )}
-                      <span>{formatMatchEvent(e, STARTER_PLAYERS)}</span>
-                    </div>
-                  );
-                })}
-                <div ref={feedEndRef} />
-             </div>
-
-             {isFinished && (
-                <div className="mt-4 pt-4 border-t border-border flex justify-center fade-in">
-                  <button onClick={finishMatch} className="btn-primary px-8">
-                    View Results
-                  </button>
-                </div>
-             )}
+          {/* Phaser Canvas */}
+          <div className="flex-1 relative overflow-hidden">
+            <PhaserGame />
           </div>
-
         </div>
-      </div>
 
-      {/* Tactical controls */}
-      <div className="border-t border-border p-4 bg-surface z-10">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-6">
-          {/* Stance */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted mr-2">Stance:</span>
-            {(["balanced", "aggressive", "defensive"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStanceChange(s)}
-                disabled={isFinished}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                  stance === s
-                    ? "bg-accent text-white"
-                    : "bg-background text-muted hover:text-foreground hover:bg-white/5 disabled:opacity-50"
-                }`}
-              >
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
+        {/* Right: Feed + Controls — fixed width, never scrolls the page */}
+        <div className="w-80 flex flex-col border-l border-border bg-[#07090f] min-h-0 overflow-hidden">
+          {/* Match Feed */}
+          <div className="p-3 border-b border-border">
+            <span className="text-xs text-muted uppercase tracking-widest font-mono">Match Feed</span>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 font-mono text-xs">
+            {events.length === 0 && (
+              <div className="text-center text-muted italic py-8">
+                {phaserReady ? "Kick-off incoming..." : "Loading..."}
+              </div>
+            )}
+            {events.map((e, idx) => {
+              const isGoal = e.type === "goal";
+              const isBreak = e.type === "halftime" || e.type === "full_time";
+              return (
+                <div
+                  key={`${e.tick}-${idx}`}
+                  className={`flex gap-2 items-start rounded px-2 py-1.5 fade-in ${
+                    isGoal
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold"
+                      : isBreak
+                      ? "bg-accent/10 border border-accent/20 text-accent font-semibold justify-center text-center"
+                      : "text-foreground/60 hover:text-foreground/90"
+                  }`}
+                >
+                  {!isBreak && (
+                    <span className="text-muted/50 shrink-0 tabular-nums">
+                      {tickToMatchTime(e.tick, totalTicks)}
+                    </span>
+                  )}
+                  <span>{formatMatchEvent(e, STARTER_PLAYERS)}</span>
+                </div>
+              );
+            })}
+            <div ref={feedEndRef} />
           </div>
 
-          {/* Commands */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted mr-2">Command:</span>
-            {(["none", "focus_attack", "protect_lead"] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCommand(c)}
-                disabled={isFinished}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                  command === c
-                    ? "bg-accent text-white"
-                    : "bg-background text-muted hover:text-foreground hover:bg-white/5 disabled:opacity-50"
-                }`}
-              >
-                {c === "none" ? "None" : c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+          {/* CTA when finished */}
+          {isFinished && (
+            <div className="p-4 border-t border-border fade-in">
+              <button onClick={finishMatch} className="btn-primary w-full">
+                View Results →
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
-          <button className="btn-secondary opacity-50 cursor-not-allowed text-sm" disabled>
-            Ultimate (charging...)
-          </button>
+          {/* Tactical Controls */}
+          <div className="border-t border-border p-4 space-y-4">
+            <div>
+              <div className="text-[10px] text-muted uppercase tracking-widest mb-2">Stance</div>
+              <div className="flex gap-1.5">
+                {(["balanced", "aggressive", "defensive"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStanceChange(s)}
+                    disabled={isFinished}
+                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-all ${
+                      stance === s
+                        ? "bg-accent text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+                        : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground disabled:opacity-40"
+                    }`}
+                  >
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] text-muted uppercase tracking-widest mb-2">Command</div>
+              <div className="flex gap-1.5">
+                {(["none", "focus_attack", "protect_lead"] as const).map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCommand(c)}
+                    disabled={isFinished}
+                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition-all ${
+                      command === c
+                        ? "bg-accent text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+                        : "bg-white/5 text-muted hover:bg-white/10 hover:text-foreground disabled:opacity-40"
+                    }`}
+                  >
+                    {c === "none" ? "None" : c === "focus_attack" ? "Attack" : "Protect"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="w-full py-2 rounded text-xs font-semibold bg-white/5 text-muted/40 cursor-not-allowed border border-dashed border-border" disabled>
+              ⚡ Ultimate — Charging...
+            </button>
+          </div>
         </div>
       </div>
     </div>
