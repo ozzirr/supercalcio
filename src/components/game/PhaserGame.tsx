@@ -40,7 +40,6 @@ export default function PhaserGame() {
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
-        EventBus.removeAllListeners();
       }
     };
   }, []);

@@ -45,6 +45,7 @@ type GameState = {
   addRewards: (xp: number, currency: number) => void;
   buyItem: (itemId: string, cost: number) => boolean;
   buyPlayer: (playerId: string, cost: number) => Promise<boolean>;
+  sellPlayer: (playerId: string, refundAmount: number) => Promise<boolean>;
   upgradePlayer: (playerId: string, stat: string, cost: number) => Promise<boolean>;
   updateProfile: (updates: { teamName?: string; badgeId?: string; username?: string }) => Promise<void>;
   initializeUser: () => void;
@@ -163,6 +164,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (error) return false;
 
     const newCurrency = state.currency - cost;
+    set({ currency: newCurrency });
+    await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
+    
+    // Refresh owned players
+    const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+    if (data) set({ ownedPlayers: data });
+
+    return true;
+  },
+
+  sellPlayer: async (playerId, refundAmount) => {
+    const state = get();
+    if (!state.user) return false;
+
+    // Remove from starting lineup if they are in it
+    if (state.lineup.some(l => l.playerId === playerId)) {
+      set({ lineup: state.lineup.filter(l => l.playerId !== playerId) });
+      state.saveSquad();
+    }
+
+    const { error } = await supabase.from('user_players').delete().eq('user_id', state.user.id).eq('player_id', playerId);
+    
+    if (error) return false;
+
+    const newCurrency = state.currency + refundAmount;
     set({ currency: newCurrency });
     await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
     

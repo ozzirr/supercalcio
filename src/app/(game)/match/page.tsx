@@ -19,7 +19,7 @@ const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), { ssr: 
 export default function MatchPage() {
   const router = useRouter();
 
-  const { lineup, availablePlayers, playstyle, stance, command, setStance, setCommand, setMatchResult, addRewards } = useGameStore();
+  const { lineup, availablePlayers, playstyle, stance, command, setStance, setCommand, setMatchResult, addRewards, ownedPlayers } = useGameStore();
   const validation = validateSquad(lineup, availablePlayers);
 
   const engineRef = useRef<MatchEngine | null>(null);
@@ -34,6 +34,7 @@ export default function MatchPage() {
   const [phaserReady, setPhaserReady] = useState(false);
   const [isSearching, setIsSearching] = useState(true);
   const [opponentInfo, setOpponentInfo] = useState<{ name: string; badge: string; playstyle: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"feed" | "tactics">("feed");
 
   const totalTicks = 90;
 
@@ -58,7 +59,25 @@ export default function MatchPage() {
         opponent = squads[Math.floor(Math.random() * squads.length)];
       }
 
-      const homeRoster = lineup.map(l => availablePlayers.find(p => p.id === l.playerId)!);
+      const homeRoster = lineup.map(l => {
+        const basePlayer = availablePlayers.find(p => p.id === l.playerId)!;
+        const userPlayer = ownedPlayers.find(p => p.player_id === l.playerId);
+        
+        if (userPlayer && userPlayer.stats_bonus) {
+          return {
+            ...basePlayer,
+            stats: {
+              pace: basePlayer.stats.pace + (userPlayer.stats_bonus.pace || 0),
+              shooting: basePlayer.stats.shooting + (userPlayer.stats_bonus.shooting || 0),
+              passing: basePlayer.stats.passing + (userPlayer.stats_bonus.passing || 0),
+              defense: basePlayer.stats.defense + (userPlayer.stats_bonus.defense || 0),
+              physical: basePlayer.stats.physical + (userPlayer.stats_bonus.physical || 0),
+              goalkeeping: basePlayer.stats.goalkeeping + (userPlayer.stats_bonus.goalkeeping || 0),
+            }
+          };
+        }
+        return basePlayer;
+      });
       homeRosterRef.current = homeRoster;
 
       let awayRoster: typeof STARTER_PLAYERS;
@@ -211,7 +230,6 @@ export default function MatchPage() {
     router.push("/results");
   };
 
-  const [activeTab, setActiveTab] = useState<"feed" | "tactics">("feed");
 
   const progress = (tick / totalTicks) * 100;
 

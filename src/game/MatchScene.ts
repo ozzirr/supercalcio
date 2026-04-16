@@ -22,6 +22,10 @@ export class MatchScene extends Phaser.Scene {
   private W = 800;
   private H = 400;
 
+  private initMatchHandler!: (data: InitData) => void;
+  private matchEventHandler!: (event: MatchEvent) => void;
+  private matchFinishedHandler!: () => void;
+
   constructor() {
     super("MatchScene");
   }
@@ -32,9 +36,19 @@ export class MatchScene extends Phaser.Scene {
     this.drawPitch();
     this.createBall();
 
-    EventBus.on("init-match", (data: InitData) => this.onInitMatch(data));
-    EventBus.on("match-event", (event: MatchEvent) => this.onMatchEvent(event));
-    EventBus.on("match-finished", () => this.onMatchFinished());
+    this.initMatchHandler = (data: InitData) => this.onInitMatch(data);
+    this.matchEventHandler = (event: MatchEvent) => this.onMatchEvent(event);
+    this.matchFinishedHandler = () => this.onMatchFinished();
+
+    EventBus.on("init-match", this.initMatchHandler);
+    EventBus.on("match-event", this.matchEventHandler);
+    EventBus.on("match-finished", this.matchFinishedHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      EventBus.off("init-match", this.initMatchHandler);
+      EventBus.off("match-event", this.matchEventHandler);
+      EventBus.off("match-finished", this.matchFinishedHandler);
+    });
 
     EventBus.emit("current-scene-ready", this);
   }
@@ -393,6 +407,6 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onMatchFinished() {
-    this.cameras.main.fade(1500, 5, 10, 20);
+    this.cameras?.main?.fade(1500, 5, 10, 20);
   }
 }

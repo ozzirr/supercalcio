@@ -1,251 +1,8 @@
-import type { PlayerDefinition } from "@/types/player";
+const fs = require('fs');
+const filePath = 'src/content/players.ts';
+let content = fs.readFileSync(filePath, 'utf8');
 
-export const STARTER_PLAYERS: PlayerDefinition[] = [
-  // --- GOALKEEPER ---
-  {
-    id: "aegis",
-    name: "Aegis",
-    archetype: "keeper",
-    roleTags: ["goalkeeper"],
-    tier: "silver",
-    stats: {
-      pace: 35,
-      shooting: 15,
-      passing: 50,
-      defense: 60,
-      physical: 65,
-      goalkeeping: 88,
-    },
-    passive: {
-      id: "aegis-passive",
-      name: "Iron Wall",
-      description: "Saves are 15% more effective when the team is defending.",
-      trigger: "on_defense",
-      effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 15, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "aegis-active",
-      name: "Command Area",
-      description: "Boosts nearby defenders' positioning for a short time.",
-      cooldownTicks: 30,
-      target: "team",
-      effect: { type: "stat_boost", stat: "defense", magnitude: 10, durationTicks: 10 },
-    },
-    ultimate: {
-      id: "aegis-ult",
-      name: "Fortress",
-      description: "Becomes nearly unbeatable for a brief window. All shots face maximum resistance.",
-      chargeRequired: 60,
-      effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 40, durationTicks: 8 },
-    },
-    portrait: "aegis",
-    flavorText: "The last line. The final word. Nothing gets past Aegis.",
-  },
-
-  // --- ATTACKER 1 ---
-  {
-    id: "blaze",
-    name: "Blaze",
-    archetype: "striker",
-    roleTags: ["attacker"],
-    tier: "silver",
-    stats: {
-      pace: 90,
-      shooting: 85,
-      passing: 45,
-      defense: 20,
-      physical: 55,
-      goalkeeping: 5,
-    },
-    passive: {
-      id: "blaze-passive",
-      name: "Ignition",
-      description: "Shooting increases by 10% after each successful dribble in a possession.",
-      trigger: "on_possession",
-      effect: { type: "stat_boost", stat: "shooting", magnitude: 10, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "blaze-active",
-      name: "Burst Sprint",
-      description: "Doubles pace for a short dash, breaking past defenders.",
-      cooldownTicks: 25,
-      target: "self",
-      effect: { type: "stat_boost", stat: "pace", magnitude: 100, durationTicks: 5 },
-    },
-    ultimate: {
-      id: "blaze-ult",
-      name: "Inferno Strike",
-      description: "Unleashes a devastating shot with massively boosted power and accuracy.",
-      chargeRequired: 50,
-      effect: { type: "stat_boost", stat: "shooting", magnitude: 60, durationTicks: 3 },
-    },
-    portrait: "blaze",
-    flavorText: "Fast as fire. Twice as dangerous. Blaze doesn't miss.",
-  },
-
-  // --- ATTACKER 2 ---
-  {
-    id: "phantom",
-    name: "Phantom",
-    archetype: "striker",
-    roleTags: ["attacker"],
-    tier: "silver",
-    stats: {
-      pace: 80,
-      shooting: 75,
-      passing: 65,
-      defense: 25,
-      physical: 40,
-      goalkeeping: 5,
-    },
-    passive: {
-      id: "phantom-passive",
-      name: "Ghost Movement",
-      description: "Has a chance to evade tackles automatically.",
-      trigger: "always",
-      effect: { type: "special", magnitude: 20, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "phantom-active",
-      name: "Shadow Step",
-      description: "Teleports past the nearest defender, creating a clear path.",
-      cooldownTicks: 30,
-      target: "self",
-      effect: { type: "disrupt", magnitude: 30, durationTicks: 3 },
-    },
-    ultimate: {
-      id: "phantom-ult",
-      name: "Vanishing Act",
-      description: "Becomes untouchable for a moment and delivers a precision strike.",
-      chargeRequired: 55,
-      effect: { type: "stat_boost", stat: "shooting", magnitude: 50, durationTicks: 4 },
-    },
-    portrait: "phantom",
-    flavorText: "Now you see him. Now you don't. But the goal is already in.",
-  },
-
-  // --- MIDFIELDER ---
-  {
-    id: "volt",
-    name: "Volt",
-    archetype: "playmaker",
-    roleTags: ["midfielder"],
-    tier: "silver",
-    stats: {
-      pace: 70,
-      shooting: 55,
-      passing: 90,
-      defense: 45,
-      physical: 50,
-      goalkeeping: 5,
-    },
-    passive: {
-      id: "volt-passive",
-      name: "Circuit",
-      description: "Successful passes boost the next teammate's action by 8%.",
-      trigger: "on_possession",
-      effect: { type: "stat_boost", magnitude: 8, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "volt-active",
-      name: "Spark Pass",
-      description: "Delivers a perfect through ball that boosts the receiver's next action.",
-      cooldownTicks: 20,
-      target: "ally",
-      effect: { type: "stat_boost", stat: "shooting", magnitude: 20, durationTicks: 5 },
-    },
-    ultimate: {
-      id: "volt-ult",
-      name: "Overcharge",
-      description: "Electrifies the entire team, boosting all stats temporarily.",
-      chargeRequired: 65,
-      effect: { type: "stat_boost", magnitude: 15, durationTicks: 12 },
-    },
-    portrait: "volt",
-    flavorText: "Every touch is a spark. Every pass is a bolt. Volt controls the current.",
-  },
-
-  // --- DEFENDER ---
-  {
-    id: "titan",
-    name: "Titan",
-    archetype: "enforcer",
-    roleTags: ["defender"],
-    tier: "silver",
-    stats: {
-      pace: 45,
-      shooting: 25,
-      passing: 40,
-      defense: 90,
-      physical: 88,
-      goalkeeping: 5,
-    },
-    passive: {
-      id: "titan-passive",
-      name: "Immovable",
-      description: "Cannot be dribbled past when stamina is above 50%.",
-      trigger: "on_defense",
-      effect: { type: "stat_boost", stat: "defense", magnitude: 20, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "titan-active",
-      name: "Crushing Tackle",
-      description: "Guaranteed ball recovery, disrupts the attacker's next action.",
-      cooldownTicks: 25,
-      target: "enemy",
-      effect: { type: "disrupt", magnitude: 40, durationTicks: 5 },
-    },
-    ultimate: {
-      id: "titan-ult",
-      name: "Earthquake",
-      description: "Shakes the field, disrupting all enemy players and recovering possession.",
-      chargeRequired: 60,
-      effect: { type: "disrupt", magnitude: 50, durationTicks: 8 },
-    },
-    portrait: "titan",
-    flavorText: "Mountains move. Titan doesn't.",
-  },
-
-  // --- HYBRID / SPECIALIST ---
-  {
-    id: "hawk",
-    name: "Hawk",
-    archetype: "specialist",
-    roleTags: ["hybrid"],
-    tier: "silver",
-    stats: {
-      pace: 75,
-      shooting: 60,
-      passing: 70,
-      defense: 65,
-      physical: 60,
-      goalkeeping: 5,
-    },
-    passive: {
-      id: "hawk-passive",
-      name: "Bird's Eye",
-      description: "Intercepts passes 15% more often. Reads the game before anyone else.",
-      trigger: "always",
-      effect: { type: "stat_boost", stat: "defense", magnitude: 15, durationTicks: 0 },
-    },
-    activeSkill: {
-      id: "hawk-active",
-      name: "Precision Cross",
-      description: "Delivers a pinpoint cross that massively boosts the target's heading chance.",
-      cooldownTicks: 22,
-      target: "ally",
-      effect: { type: "stat_boost", stat: "shooting", magnitude: 25, durationTicks: 4 },
-    },
-    ultimate: {
-      id: "hawk-ult",
-      name: "Aerial Supremacy",
-      description: "Dominates the air for a stretch, winning every aerial duel and delivering a decisive header.",
-      chargeRequired: 55,
-      effect: { type: "stat_boost", stat: "physical", magnitude: 50, durationTicks: 6 },
-    },
-    portrait: "hawk",
-    flavorText: "The pitch is a chessboard. Hawk already knows your next three moves.",
-  },
+const newPlayers = `
   // --- NEW GOALKEEPERS ---
   {
     id: "goliath",
@@ -256,7 +13,7 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     stats: { pace: 25, shooting: 10, passing: 40, defense: 80, physical: 95, goalkeeping: 85 },
     passive: { id: "goliath-passive", name: "Colossus", description: "Takes up massive space, reducing long shot accuracy.", trigger: "always", effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 15, durationTicks: 0 } },
     activeSkill: { id: "goliath-active", name: "Intimidate", description: "Lowers attacker's shooting stat momentarily.", cooldownTicks: 35, target: "enemy", effect: { type: "disrupt", magnitude: 30, durationTicks: 5 } },
-    ultimate: { id: "goliath-ult", name: "Brick Wall", description: "Blocks everything.", chargeRequired: 65, effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 50, durationTicks: 5 } },
+    ultimate: { id: "goliath-ult", name: "Brick Wall", description: "Blocks everything for the next 5 seconds.", chargeRequired: 65, effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 50, durationTicks: 5 } },
     portrait: "goliath", flavorText: "You don't shoot past Goliath. You bounce off him."
   },
   {
@@ -267,8 +24,8 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     tier: "epico",
     stats: { pace: 65, shooting: 15, passing: 60, defense: 50, physical: 55, goalkeeping: 92 },
     passive: { id: "viper-passive", name: "Reflex", description: "Massive boost against close range shots.", trigger: "on_defense", effect: { type: "stat_boost", stat: "goalkeeping", magnitude: 20, durationTicks: 0 } },
-    activeSkill: { id: "viper-active", name: "Strike", description: "Aggressive clearance.", cooldownTicks: 25, target: "ally", effect: { type: "stat_boost", stat: "passing", magnitude: 40, durationTicks: 3 } },
-    ultimate: { id: "viper-ult", name: "Venom Catch", description: "Catches and poisons stamina.", chargeRequired: 55, effect: { type: "disrupt", magnitude: 40, durationTicks: 10 } },
+    activeSkill: { id: "viper-active", name: "Strike", description: "Aggressive clearance that functions as a perfect lob pass.", cooldownTicks: 25, target: "ally", effect: { type: "stat_boost", stat: "passing", magnitude: 40, durationTicks: 3 } },
+    ultimate: { id: "viper-ult", name: "Venom Catch", description: "Catches the ball and poisons the striker's stamina.", chargeRequired: 55, effect: { type: "disrupt", magnitude: 40, durationTicks: 10 } },
     portrait: "viper", flavorText: "Fastest hands in the league."
   },
 
@@ -280,7 +37,7 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     roleTags: ["defender"],
     tier: "bronze",
     stats: { pace: 35, shooting: 20, passing: 30, defense: 75, physical: 85, goalkeeping: 5 },
-    passive: { id: "p-rmp", name: "Barricade", description: "Slows opponents.", trigger: "on_defense", effect: { type: "disrupt", magnitude: 10, durationTicks: 0 } },
+    passive: { id: "p-rmp", name: "Barricade", description: "Slows down opponents.", trigger: "on_defense", effect: { type: "disrupt", magnitude: 10, durationTicks: 0 } },
     activeSkill: { id: "a-rmp", name: "Block", description: "Blocks a pass.", cooldownTicks: 20, target: "enemy", effect: { type: "disrupt", magnitude: 20, durationTicks: 3 } },
     ultimate: { id: "u-rmp", name: "Hold the Line", description: "Massive def boost.", chargeRequired: 50, effect: { type: "stat_boost", stat: "defense", magnitude: 30, durationTicks: 5 } },
     portrait: "rampart", flavorText: "None shall pass."
@@ -304,7 +61,7 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     roleTags: ["defender"],
     tier: "gold",
     stats: { pace: 55, shooting: 40, passing: 45, defense: 80, physical: 95, goalkeeping: 5 },
-    passive: { id: "p-ava", name: "Snowball", description: "Stronger on possession.", trigger: "on_defense", effect: { type: "stat_boost", stat: "physical", magnitude: 10, durationTicks: 0 } },
+    passive: { id: "p-ava", name: "Snowball", description: "Gets stronger as possession increases.", trigger: "on_defense", effect: { type: "stat_boost", stat: "physical", magnitude: 10, durationTicks: 0 } },
     activeSkill: { id: "a-ava", name: "Slide", description: "Tackle.", cooldownTicks: 25, target: "enemy", effect: { type: "disrupt", magnitude: 30, durationTicks: 2 } },
     ultimate: { id: "u-ava", name: "Landslide", description: "Clears area.", chargeRequired: 50, effect: { type: "disrupt", magnitude: 45, durationTicks: 4 } },
     portrait: "avalanche", flavorText: "Brute force."
@@ -343,7 +100,7 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     tier: "epico",
     stats: { pace: 60, shooting: 50, passing: 90, defense: 70, physical: 65, goalkeeping: 5 },
     passive: { id: "p-chr", name: "Time", description: "Slow enemy pace.", trigger: "always", effect: { type: "disrupt", magnitude: 10, durationTicks: 0 } },
-    activeSkill: { id: "a-chr", name: "Rewind", description: "Recovers error.", cooldownTicks: 40, target: "self", effect: { type: "stat_boost", stat: "defense", magnitude: 30, durationTicks: 2 } },
+    activeSkill: { id: "a-chr", name: "Rewind", description: "Recovers error.", cooldownTicks: 40, target: "self", effect: { type: "stat_boost", stat: "control", magnitude: 30, durationTicks: 2 } },
     ultimate: { id: "u-chr", name: "Stop Time", description: "Freeze enemies.", chargeRequired: 70, effect: { type: "disrupt", magnitude: 80, durationTicks: 5 } },
     portrait: "chronos", flavorText: "Tick tock."
   },
@@ -422,3 +179,8 @@ export const STARTER_PLAYERS: PlayerDefinition[] = [
     portrait: "apex", flavorText: "Top of the food chain."
   }
 ];
+`;
+
+content = content.replace('];\n', newPlayers + '\n];\n');
+fs.writeFileSync(filePath, content);
+console.log('Players injected');

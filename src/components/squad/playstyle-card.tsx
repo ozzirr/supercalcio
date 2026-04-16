@@ -35,7 +35,7 @@ export function PlaystyleCard({ playstyle, selected, onClick }: PlaystyleCardPro
     <button
       onClick={onClick}
       className={`card card-hover p-4 text-left transition-all w-full ${
-        selected ? "border-accent shadow-[0_0_24px_rgba(99,102,241,0.15)]" : ""
+        selected ? "border-accent ring-1 ring-accent bg-accent/5 scale-[1.02] shadow-[0_0_24px_rgba(251,191,36,0.15)]" : "border-white/5"
       }`}
     >
       <div className="font-semibold mb-1">{playstyle.name}</div>
