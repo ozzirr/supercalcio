@@ -249,7 +249,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad }: { data: any }) => {
           if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
         });
-        supabase.from('user_players').select('*').eq('user_id', data.session.user.id).then(({ data: players }) => {
+        supabase.from('user_players').select('*').eq('user_id', data.session.user.id).then(({ data: players }: { data: any }) => {
           if (players) set({ ownedPlayers: players });
         });
       }
