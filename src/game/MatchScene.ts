@@ -48,9 +48,9 @@ export class MatchScene extends Phaser.Scene {
     this.ball.setDepth(10);
 
     // Listen to React
-    EventBus.on("init-match", this.onInitMatch, this);
-    EventBus.on("match-event", this.onMatchEvent, this);
-    EventBus.on("match-finished", this.onMatchFinished, this);
+    EventBus.on("init-match", (data: InitData) => this.onInitMatch(data));
+    EventBus.on("match-event", (event: MatchEvent) => this.onMatchEvent(event));
+    EventBus.on("match-finished", () => this.onMatchFinished());
 
     EventBus.emit("current-scene-ready", this);
   }
