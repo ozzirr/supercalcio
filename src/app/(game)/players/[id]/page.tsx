@@ -14,17 +14,19 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
   const playerBase = STARTER_PLAYERS.find(p => p.id === id);
   const userRecord = ownedPlayers.find(p => p.player_id === id);
 
-  if (!playerBase || !userRecord) {
+  if (!playerBase) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12">
-        <div className="text-2xl font-bold mb-4 text-muted">Player not found in your roster</div>
-        <button onClick={() => router.push("/mercato")} className="btn-primary">Buy from Mercato</button>
+        <div className="text-2xl font-bold mb-4 text-muted">Player not found in database</div>
+        <button onClick={() => router.push("/mercato")} className="btn-primary">Back to Mercato</button>
       </div>
     );
   }
 
-  const bonuses = userRecord.stats_bonus || {};
-  const currentLevel = userRecord.level || 1;
+  const isOwned = !!userRecord;
+
+  const bonuses = userRecord?.stats_bonus || {};
+  const currentLevel = userRecord?.level || 1;
   const upgradeCost = currentLevel * 50;
 
   const handleUpgrade = async (stat: string) => {
@@ -74,8 +76,12 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
         {/* Right: Upgrades & Details */}
         <div className="space-y-8 py-4">
           <div>
-            <h2 className="text-3xl font-black uppercase tracking-tight mb-2 italic">Player Performance</h2>
-            <p className="text-muted">Potenzia il tuo campione utilizzando i Credits guadagnati sul campo.</p>
+            <h2 className="text-3xl font-black uppercase tracking-tight mb-2 italic">
+              {isOwned ? "Player Performance" : "Scouting Report"}
+            </h2>
+            <p className="text-muted">
+              {isOwned ? "Potenzia il tuo campione utilizzando i Credits." : "Esamina i parametri del campione prima di acquistarlo sul Mercato."}
+            </p>
           </div>
 
           <div className="grid gap-6">
@@ -99,13 +105,22 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
                 
                 <StatBar value={value} label={stat} />
 
-                <button
-                  onClick={() => handleUpgrade(stat)}
-                  disabled={currency < upgradeCost}
-                  className="w-full mt-2 py-3 bg-accent text-black font-black uppercase text-xs tracking-widest rounded-xl hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  UPGRADE (+1) — {upgradeCost} CR
-                </button>
+                {isOwned ? (
+                  <button
+                    onClick={() => handleUpgrade(stat)}
+                    disabled={currency < upgradeCost}
+                    className="w-full mt-2 py-3 bg-accent text-black font-black uppercase text-xs tracking-widest rounded-xl hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg"
+                  >
+                    UPGRADE (+1) — {upgradeCost} CR
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full mt-2 py-3 bg-white/5 text-muted border border-white/10 font-black uppercase text-xs tracking-widest rounded-xl disabled:cursor-not-allowed transition-all"
+                  >
+                    ACQUISTA PER POTENZIARE
+                  </button>
+                )}
               </div>
             ))}
           </div>
