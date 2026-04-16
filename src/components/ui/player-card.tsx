@@ -30,8 +30,12 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold shrink-0">
-            {player.name[0]}
+          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold shrink-0 relative overflow-hidden">
+            {player.portrait ? (
+              <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+            ) : (
+              player.name[0]
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate">{player.name}</div>
@@ -53,8 +57,12 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
       }`}
     >
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xl font-bold shrink-0">
-          {player.name[0]}
+        <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xl font-bold shrink-0 relative overflow-hidden">
+          {player.portrait ? (
+            <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+          ) : (
+            player.name[0]
+          )}
         </div>
         <div className="flex-1 min-w-0 space-y-3">
           <div>

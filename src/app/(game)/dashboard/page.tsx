@@ -21,7 +21,7 @@ export default function DashboardPage() {
       <div className="w-full max-w-2xl space-y-8">
         {/* Hero */}
         <div className="text-center space-y-3">
-          <h1 className="text-4xl font-bold tracking-tight">Project X</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Supercalcio</h1>
           <p className="text-muted text-lg">Build your squad. Choose your strategy. Dominate the arena.</p>
         </div>
 

@@ -13,12 +13,14 @@ export function NavBar() {
   const pathname = usePathname();
   const xp = useGameStore((s) => s.xp);
   const currency = useGameStore((s) => s.currency);
+  const user = useGameStore(s => s.user);
+  const logout = useGameStore(s => s.logout);
 
   return (
     <nav className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface">
       <div className="flex items-center gap-8">
         <Link href="/dashboard" className="text-lg font-bold tracking-tight text-accent">
-          Project X
+          Supercalcio
         </Link>
         <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => (
@@ -45,6 +47,16 @@ export function NavBar() {
           <span className="text-muted">Credits</span>
           <span className="font-semibold text-warning">{currency}</span>
         </div>
+        <div className="w-px h-6 bg-border mx-2"></div>
+        {user ? (
+          <button onClick={logout} className="text-muted hover:text-danger transition-colors text-xs uppercase tracking-wider">
+            Logout
+          </button>
+        ) : (
+          <Link href="/login" className="text-muted hover:text-accent transition-colors text-xs uppercase tracking-wider">
+            Login
+          </Link>
+        )}
       </div>
     </nav>
   );

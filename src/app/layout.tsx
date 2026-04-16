@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Project X",
+  title: "Supercalcio",
   description: "Fantasy football strategy game",
 };
 

@@ -5,6 +5,7 @@ import type { PlayerDefinition } from "@/types/player";
 import type { Playstyle, LineupSlot } from "@/types/squad";
 import type { MatchRecord, TeamStance, TeamCommand } from "@/types/match";
 import { STARTER_PLAYERS } from "@/content/players";
+import { supabase } from "@/lib/supabase/client";
 
 type GameState = {
   // Roster & squad
@@ -19,6 +20,7 @@ type GameState = {
   command: TeamCommand;
 
   // User
+  user: any | null;
   xp: number;
   currency: number;
 
@@ -36,9 +38,12 @@ type GameState = {
   clearMatch: () => void;
   setMatchInProgress: (inProgress: boolean) => void;
   addRewards: (xp: number, currency: number) => void;
+  initializeUser: () => void;
+  logout: () => void;
+  saveSquad: () => Promise<void>;
 };
 
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   availablePlayers: STARTER_PLAYERS,
   lineup: [],
   playstyle: "possession_control",
@@ -48,6 +53,7 @@ export const useGameStore = create<GameState>((set) => ({
   stance: "balanced",
   command: "none",
 
+  user: null,
   xp: 0,
   currency: 100,
 
@@ -101,8 +107,54 @@ export const useGameStore = create<GameState>((set) => ({
   setMatchInProgress: (inProgress) => set({ matchInProgress: inProgress }),
 
   addRewards: (xp, currency) =>
-    set((state) => ({
-      xp: state.xp + xp,
-      currency: state.currency + currency,
-    })),
+    set((state) => {
+      const newXp = state.xp + xp;
+      const newCurrency = state.currency + currency;
+      
+      // Attempt to sync to supabase if user exists
+      if (state.user) {
+        supabase.from('profiles').update({ xp: newXp, currency: newCurrency }).eq('id', state.user.id).then();
+      }
+
+      return { xp: newXp, currency: newCurrency };
+    }),
+
+  initializeUser: () => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        set({ user: data.session.user });
+        // Fetch profile
+        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(({ data: profile }) => {
+          if (profile) set({ xp: profile.xp, currency: profile.currency });
+        });
+        // Fetch squad
+        supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad, error }) => {
+          // If no squad exists for this profile, we should just let them build it
+          if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
+        });
+      }
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      set({ user: session?.user || null });
+    });
+  },
+
+  saveSquad: async () => {
+    const state = get();
+    if (!state.user || state.lineup.length !== 5) return;
+    
+    // Upsert squad
+    await supabase.from('squads').upsert({
+       user_id: state.user.id,
+       playstyle: state.playstyle,
+       lineup: state.lineup
+    }, { onConflict: 'user_id' });
+  },
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ user: null });
+    window.location.href = "/login";
+  }
 }));

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useGameStore } from "@/lib/store/game-store";
+import { tickToMatchTime, formatMatchEvent } from "@/utils/formatting";
+import { STARTER_PLAYERS } from "@/content/players";
 
 export default function ResultsPage() {
   const currentMatch = useGameStore((s) => s.currentMatch);
@@ -57,11 +59,21 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Highlights placeholder */}
+        {/* Highlights */}
         <div className="card p-6">
-          <h3 className="font-semibold text-muted uppercase text-sm tracking-wider mb-3">Highlights</h3>
-          <div className="text-sm text-muted text-center py-4">
-            Match timeline will display here (Milestone 3+)
+          <h3 className="font-semibold text-muted uppercase text-sm tracking-wider mb-3">Match Highlights</h3>
+          <div className="text-sm space-y-2 max-h-64 overflow-y-auto pr-2">
+            {currentMatch.timeline.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").map((e, idx) => (
+              <div key={idx} className="flex gap-3 items-center">
+                <span className="text-muted font-mono text-xs w-10">{tickToMatchTime(e.tick, 90)}</span>
+                <span className={e.type === "goal" ? "text-emerald-400 font-bold" : "text-foreground"}>
+                  {formatMatchEvent(e, STARTER_PLAYERS)}
+                </span>
+              </div>
+            ))}
+            {currentMatch.timeline.filter(e => e.type === "goal" || e.metadata?.quality === "excellent" || e.metadata?.note === "Crucial block").length === 0 && (
+              <div className="text-muted text-center italic py-2">No major highlights this match.</div>
+            )}
           </div>
         </div>
 

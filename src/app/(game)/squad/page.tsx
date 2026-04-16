@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useGameStore } from "@/lib/store/game-store";
 import { PlayerCard } from "@/components/ui/player-card";
 import { PlayerDetailModal } from "@/components/squad/player-detail-modal";
@@ -24,7 +24,10 @@ export default function SquadPage() {
     clearLineup,
     autoFillLineup,
     setPlaystyle,
+    saveSquad
   } = useGameStore();
+
+  const router = useRouter();
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerDefinition | null>(null);
   const [modalPlayer, setModalPlayer] = useState<PlayerDefinition | null>(null);
@@ -138,12 +141,18 @@ export default function SquadPage() {
                 Clear
               </button>
             )}
-            <Link
-              href={validation.valid ? "/match" : "#"}
+            <button
+              onClick={async () => {
+                if (validation.valid) {
+                  await saveSquad();
+                  router.push("/match");
+                }
+              }}
+              disabled={!validation.valid}
               className={`btn-primary text-sm ${!validation.valid ? "opacity-40 pointer-events-none" : ""}`}
             >
               Start Match
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -181,8 +190,12 @@ export default function SquadPage() {
                   >
                     {player ? (
                       <>
-                        <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xl relative">
-                          {player.name[0]}
+                        <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-xl relative overflow-hidden">
+                          {player.portrait ? (
+                            <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover relative" />
+                          ) : (
+                            player.name[0]
+                          )}
                           <button
                             onClick={(e) => handleSlotRemove(i, e)}
                             className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-danger/80 text-white text-[10px] flex items-center justify-center hover:bg-danger transition-colors"
