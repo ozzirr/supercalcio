@@ -23,6 +23,7 @@ type GameState = {
   user: any | null;
   xp: number;
   currency: number;
+  purchasedItems: string[];
 
   // Actions
   setLineup: (lineup: LineupSlot[]) => void;
@@ -38,6 +39,7 @@ type GameState = {
   clearMatch: () => void;
   setMatchInProgress: (inProgress: boolean) => void;
   addRewards: (xp: number, currency: number) => void;
+  buyItem: (itemId: string, cost: number) => boolean;
   initializeUser: () => void;
   logout: () => void;
   saveSquad: () => Promise<void>;
@@ -56,6 +58,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   user: null,
   xp: 0,
   currency: 100,
+  purchasedItems: [],
 
   setLineup: (lineup) => set({ lineup }),
 
@@ -118,6 +121,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       return { xp: newXp, currency: newCurrency };
     }),
+
+  buyItem: (itemId, cost) => {
+    const state = get();
+    if (state.currency < cost || state.purchasedItems.includes(itemId)) return false;
+    set({ currency: state.currency - cost, purchasedItems: [...state.purchasedItems, itemId] });
+    return true;
+  },
 
   initializeUser: () => {
     if (!supabase) return;

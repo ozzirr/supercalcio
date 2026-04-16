@@ -7,6 +7,7 @@ import { useGameStore } from "@/lib/store/game-store";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home" },
   { href: "/squad", label: "Squad" },
+  { href: "/shop", label: "Shop" },
 ];
 
 export function NavBar() {
