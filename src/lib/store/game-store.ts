@@ -112,7 +112,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newCurrency = state.currency + currency;
       
       // Attempt to sync to supabase if user exists
-      if (state.user) {
+      if (state.user && supabase) {
         supabase.from('profiles').update({ xp: newXp, currency: newCurrency }).eq('id', state.user.id).then();
       }
 
@@ -120,31 +120,28 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
 
   initializeUser: () => {
-    supabase.auth.getSession().then(({ data }) => {
+    if (!supabase) return;
+
+    supabase.auth.getSession().then(({ data }: { data: { session: { user: any } | null } }) => {
       if (data.session?.user) {
         set({ user: data.session.user });
-        // Fetch profile
-        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(({ data: profile }) => {
+        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(({ data: profile }: { data: any }) => {
           if (profile) set({ xp: profile.xp, currency: profile.currency });
         });
-        // Fetch squad
-        supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad, error }) => {
-          // If no squad exists for this profile, we should just let them build it
+        supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad }: { data: any }) => {
           if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
         });
       }
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((_event: any, session: any) => {
       set({ user: session?.user || null });
     });
   },
 
   saveSquad: async () => {
     const state = get();
-    if (!state.user || state.lineup.length !== 5) return;
-    
-    // Upsert squad
+    if (!state.user || state.lineup.length !== 5 || !supabase) return;
     await supabase.from('squads').upsert({
        user_id: state.user.id,
        playstyle: state.playstyle,
