@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { STARTER_PLAYERS } from "@/content/players";
 import { PlayerCard } from "@/components/ui/player-card";
@@ -11,6 +11,8 @@ export default function MercatoPage() {
   const [marketPlayers, setMarketPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const isTransactionInProgress = useRef(false);
 
   useEffect(() => {
     async function fetchMarket() {
@@ -32,6 +34,8 @@ export default function MercatoPage() {
   }, []);
 
   const handleBuy = async (player: any) => {
+    if (isTransactionInProgress.current) return;
+    
     if (ownedPlayers.length >= 10) {
       setNotification(`⚠️ Roster pieno (Max 10 giocatori). Vendi qualcuno per acquistare.`);
       setTimeout(() => setNotification(null), 3000);
@@ -42,7 +46,13 @@ export default function MercatoPage() {
       setTimeout(() => setNotification(null), 3000);
       return;
     }
+    
+    isTransactionInProgress.current = true;
+    setProcessingId(player.player_id);
     const ok = await buyPlayer(player.player_id, player.cost);
+    setProcessingId(null);
+    isTransactionInProgress.current = false;
+
     if (ok) {
       setNotification(`✅ Acquistato: ${player.player_id}!`);
       setTimeout(() => setNotification(null), 3000);
@@ -50,6 +60,8 @@ export default function MercatoPage() {
   };
 
   const handleSell = async (item: any, base: any) => {
+    if (isTransactionInProgress.current) return;
+
     if (ownedPlayers.length <= 5) {
       setNotification(`⚠️ Impossibile vendere: devi avere almeno 5 giocatori.`);
       setTimeout(() => setNotification(null), 3000);
@@ -67,13 +79,31 @@ export default function MercatoPage() {
         return;
       }
     }
-
-    const refund = Math.floor(item.cost * 0.6);
+    
+    isTransactionInProgress.current = true;
+    setProcessingId(item.player_id);
+    const refund = calculateRefund(item.player_id, item.cost);
     const ok = await useGameStore.getState().sellPlayer(item.player_id, refund);
+    setProcessingId(null);
+    isTransactionInProgress.current = false;
+
     if (ok) {
       setNotification(`💰 Venduto: ${base.name} per ${refund} CR`);
       setTimeout(() => setNotification(null), 3000);
     }
+  };
+
+  const calculateRefund = (pid: string, baseCost: number) => {
+    const userRecord = ownedPlayers.find(p => p.player_id === pid);
+    const bonuses = userRecord?.stats_bonus || {};
+    const totalBonuses = Object.values(bonuses).reduce((a: any, b: any) => a + (Number(b) || 0), 0) as number;
+    
+    const baseRefund = Math.floor(baseCost * 0.6);
+    // Each upgrade point cost currentLevel * 50. 
+    // For simplicity, we assume an average refund of 25 CR per point (50% of base upgrade cost)
+    const upgradeRefund = totalBonuses * 25; 
+    
+    return baseRefund + upgradeRefund;
   };
 
   const isOwned = (pid: string) => ownedPlayers.some(p => p.player_id === pid);
@@ -117,10 +147,12 @@ export default function MercatoPage() {
               const base = STARTER_PLAYERS.find(p => p.id === item.player_id);
               if (!base) return null;
               const owned = isOwned(item.player_id);
+              const refundAmount = owned ? calculateRefund(item.player_id, item.cost) : 0;
+              const isProcessing = processingId === item.player_id;
 
               return (
                 <div key={idx} className="flex flex-col gap-2 relative">
-                  <div className={`transition-opacity ${owned ? "opacity-70" : ""}`}>
+                  <div className={`transition-opacity ${owned ? "opacity-70" : ""} ${isProcessing ? "animate-pulse" : ""}`}>
                     <PlayerCard player={base} />
                   </div>
                   
@@ -130,9 +162,10 @@ export default function MercatoPage() {
                         <div className="text-[9px] xl:text-[10px] text-accent font-black uppercase tracking-widest">In Rosa</div>
                         <button
                           onClick={() => handleSell(item, base)}
-                          className="w-full py-1.5 xl:py-2 bg-danger/20 text-danger border border-danger/40 font-black uppercase text-[10px] xl:text-xs tracking-widest rounded-lg hover:bg-danger/30 transition-all shadow-md"
+                          disabled={isProcessing}
+                          className="w-full py-1.5 xl:py-2 bg-danger/20 text-danger border border-danger/40 font-black uppercase text-[10px] xl:text-xs tracking-widest rounded-lg hover:bg-danger/30 transition-all shadow-md disabled:opacity-30"
                         >
-                          Vendi (+{Math.floor(item.cost * 0.6)} CR)
+                          {isProcessing ? "Elaborazione..." : `Vendi (+${refundAmount} CR)`}
                         </button>
                       </div>
                     ) : (
@@ -140,10 +173,10 @@ export default function MercatoPage() {
                         <div className="text-sm xl:text-lg font-black italic text-white leading-none">{item.cost} <span className="text-[8px] xl:text-[10px] font-normal tracking-widest">CR</span></div>
                         <button
                           onClick={() => handleBuy(item)}
-                          disabled={currency < item.cost || ownedPlayers.length >= 10}
+                          disabled={currency < item.cost || ownedPlayers.length >= 10 || isProcessing}
                           className="w-full py-1.5 xl:py-2 bg-accent text-black font-black uppercase text-[10px] xl:text-xs tracking-widest rounded-lg hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
-                          Acquista
+                          {isProcessing ? "Acquisto..." : "Acquista"}
                         </button>
                       </div>
                     )}

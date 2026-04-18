@@ -14,15 +14,18 @@ const BADGES = [
 
 export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const router = useRouter();
-  const { teamName, username: currentUsername, badgeId, user, updateProfile } = useGameStore();
+  const { teamName, username: currentUsername, badgeId, user, updateProfile, ownedPlayers } = useGameStore();
   const [name, setName] = useState(teamName);
   const [username, setUsername] = useState(currentUsername);
   const [selectedBadge, setSelectedBadge] = useState(badgeId);
   const [loading, setLoading] = useState(false);
 
-  // If the user already has a custom name, don't show the initial setup auto-modal
-  const isDefault = teamName.startsWith("Squad ") || !teamName;
-  const showModal = manualOpen || isDefault;
+  // Onboarding is only forced if name is default AND user has no players
+  const isDefaultName = teamName.startsWith("Squad ") || !teamName;
+  const hasClaimedPack = ownedPlayers && ownedPlayers.length > 0;
+  
+  // Show if manually triggered OR if it's the first-time onboarding (default name AND no players)
+  const showModal = manualOpen || (isDefaultName && !hasClaimedPack);
 
   useEffect(() => {
     setName(teamName);
@@ -41,8 +44,8 @@ export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean
     setLoading(false);
     if (onClose) onClose();
     
-    // If it was the initial setup, redirect to squad with claim flag
-    if (isDefault) {
+    // If it was the initial setup (no players yet), redirect to squad with claim flag
+    if (!hasClaimedPack) {
       router.push("/squad?claim=true");
     }
   };
@@ -107,7 +110,7 @@ export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean
             disabled={loading || !name.trim()}
             className="w-full btn-primary py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl disabled:opacity-30"
           >
-            {loading ? "Registrazione..." : isDefault ? "Ricevi Starter Pack →" : "Salva Modifiche"}
+            {loading ? "Registrazione..." : !hasClaimedPack ? "Ricevi Starter Pack →" : "Salva Modifiche"}
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { useGameStore } from "@/lib/store/game-store";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { MatchOverlay } from "@/components/game/MatchOverlay";
 
 export default function GameLayout({ children }: { children: React.ReactNode }) {
   const initializeUser = useGameStore(s => s.initializeUser);
@@ -54,6 +55,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
     <>
       <ProfileSetup isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} />
       <NavBar onOpenProfile={() => setProfileModalOpen(true)} />
+      <MatchOverlay />
       <main className="flex-1 flex flex-col pb-16 lg:pb-0">{children}</main>
       <MobileTabBar />
     </>

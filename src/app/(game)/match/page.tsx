@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { validateSquad } from "@/types/squad";
 import { MatchEngine } from "@/engine/match-engine";
@@ -10,51 +10,53 @@ import { formatMatchEvent, tickToMatchTime } from "@/utils/formatting";
 import type { MatchEvent } from "@/types/match";
 import { STARTER_PLAYERS } from "@/content/players";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { EventBus } from "@/game/EventBus";
 import { supabase } from "@/lib/supabase/client";
-
-const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), { ssr: false });
 
 export default function MatchPage() {
   const router = useRouter();
 
-  const { lineup, availablePlayers, playstyle, stance, command, setStance, setCommand, setMatchResult, addRewards, ownedPlayers } = useGameStore();
+  // Store connection
+  const { 
+    lineup, availablePlayers, playstyle, stance, command, 
+    setStance, setCommand, addRewards, ownedPlayers,
+    ultimateReady, setUltimateReady, activateUltimate,
+    isMuted, setMuted,
+    matchInProgress, matchTick, matchScore, matchEvents,
+    startGlobalMatch, finishMatchAndSave, opponentInfo,
+    equippedStadium
+  } = useGameStore();
+
   const validation = validateSquad(lineup, availablePlayers);
 
-  const engineRef = useRef<MatchEngine | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const homeRosterRef = useRef<typeof STARTER_PLAYERS>([]);
-  const awayRosterRef = useRef<typeof STARTER_PLAYERS>([]);
-
-  const [tick, setTick] = useState(0);
-  const [score, setScore] = useState({ home: 0, away: 0 });
-  const [events, setEvents] = useState<MatchEvent[]>([]);
-  const [isFinished, setIsFinished] = useState(false);
-  const [phaserReady, setPhaserReady] = useState(false);
-  const [isSearching, setIsSearching] = useState(true);
-  const [opponentInfo, setOpponentInfo] = useState<{ name: string; badge: string; playstyle: string } | null>(null);
+  const [isSearching, setIsSearching] = useState(!matchInProgress);
   const [activeTab, setActiveTab] = useState<"feed" | "tactics">("feed");
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [ultimateCharge, setUltimateCharge] = useState(0);
 
   const totalTicks = 90;
+  const matchInitializedRef = useRef(false);
 
-  // Fetch opponent and build engine once on mount
+  // Setup match IF NOT IN PROGRESS
   useEffect(() => {
-    if (!validation.valid || engineRef.current) return;
+    if (!validation.valid || matchInProgress || matchInitializedRef.current) {
+      if (matchInProgress) setIsSearching(false);
+      return;
+    }
+
+    matchInitializedRef.current = true;
 
     async function setupMatch() {
       if (!supabase) return;
 
-      const { data: user } = await supabase.auth.getUser();
+      const { data: userAuth } = await supabase.auth.getUser();
       
       // 1. Fetch random opponent squad
       const { data: squads } = await supabase
         .from('squads')
         .select('*, profiles(username, team_name, badge_id)')
-        .neq('user_id', user.user?.id)
-        .limit(10); // Pick from a small pool for randomness
+        .neq('user_id', userAuth.user?.id)
+        .limit(10);
 
       let opponent: any = null;
       if (squads && squads.length > 0) {
@@ -80,7 +82,6 @@ export default function MatchPage() {
         }
         return basePlayer;
       });
-      homeRosterRef.current = homeRoster;
 
       let awayRoster: typeof STARTER_PLAYERS;
       let awayPlaystyle: any = "balanced";
@@ -88,7 +89,6 @@ export default function MatchPage() {
       let awayBadge = "badge_lightning";
 
       if (opponent) {
-        // Map opponent lineup IDs to definitions
         awayRoster = opponent.lineup.map((slot: any) => 
           STARTER_PLAYERS.find(p => p.id === slot.playerId) || STARTER_PLAYERS[0]
         );
@@ -96,14 +96,10 @@ export default function MatchPage() {
         awayName = opponent.profiles?.team_name || opponent.profiles?.username || "Rival Tech";
         awayBadge = opponent.profiles?.badge_id || "badge_lightning";
       } else {
-        // Fallback to mirror if no one else exists (first user problem)
         awayRoster = [...homeRoster].reverse();
       }
       
-      awayRosterRef.current = awayRoster;
-      setOpponentInfo({ name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
-
-      engineRef.current = new MatchEngine(
+      const engine = new MatchEngine(
         {
           totalTicks,
           halftimeTick: 45,
@@ -119,96 +115,55 @@ export default function MatchPage() {
         awayRoster
       );
 
-      // Delay searching state slightly for "feel"
-      setTimeout(() => setIsSearching(false), 1500);
+      // Start Globale
+      startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
+
+      // Init Phaser (it stays in layout)
+      setTimeout(() => {
+        EventBus.emit("init-match", {
+          homeRoster,
+          awayRoster,
+          stadiumId: equippedStadium,
+          kitId: useGameStore.getState().equippedKit,
+          badgeId: useGameStore.getState().badgeId
+        });
+        setIsSearching(false);
+      }, 1500);
     }
 
     setupMatch();
+  }, [validation.valid, matchInProgress]);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [validation.valid]);
-
-  // Listen for Phaser scene ready, THEN init match
   useEffect(() => {
-    const onSceneReady = () => {
-      setPhaserReady(true);
-      EventBus.emit("init-match", {
-        homeRoster: homeRosterRef.current,
-        awayRoster: awayRosterRef.current,
-      });
-    };
+    const onUltimateUpdate = (charge: number) => setUltimateCharge(charge);
+    const onUltimateReady = (ready: boolean) => setUltimateReady(ready);
 
-    const onUltimateUpdate = (charge: number) => {
-      setUltimateCharge(charge);
-    };
-
-    EventBus.on("current-scene-ready", onSceneReady);
     EventBus.on("ultimate-update", onUltimateUpdate);
+    EventBus.on("ultimate-ready", onUltimateReady);
     return () => { 
-      EventBus.off("current-scene-ready", onSceneReady); 
       EventBus.off("ultimate-update", onUltimateUpdate);
+      EventBus.off("ultimate-ready", onUltimateReady);
     };
-  }, []);
+  }, [setUltimateReady]);
 
-  // Start game loop only when both engine and phaser are ready
+  // Handle Match Finish
   useEffect(() => {
-    if (!phaserReady || !engineRef.current || intervalRef.current) return;
-
-    intervalRef.current = setInterval(() => {
-      if (!engineRef.current) return;
-
-      const newEvents = engineRef.current.tick();
-      const state = engineRef.current.getState();
-
-      setTick(state.tick);
-      setScore({ home: state.homeScore, away: state.awayScore });
-
-      if (newEvents.length > 0) {
-        setEvents(prev => [...prev, ...newEvents]);
-        newEvents.forEach(e => EventBus.emit("match-event", e));
-      }
-
-      if (state.phase === "finished") {
-        EventBus.emit("match-finished");
-        clearInterval(intervalRef.current!);
-        setIsFinished(true);
-      }
-    }, 500);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [phaserReady]);
-
-  // Auto-finish match
-  const finishTriggeredRef = useRef(false);
-  useEffect(() => {
-    if (isFinished && !finishTriggeredRef.current) {
-      finishTriggeredRef.current = true;
-      console.log("DEBUG: Match finished. Showing overlay in 1.5s...");
-      
-      const timer1 = setTimeout(() => {
+    if (matchTick >= totalTicks && matchInProgress) {
+      setTimeout(() => {
         setShowResultOverlay(true);
-        console.log("DEBUG: Overlay visible. Redirecting in 4s...");
-        
-        const timer2 = setTimeout(() => {
-          finishMatch();
-        }, 4000); // 4 seconds of glory
-        
-        return () => clearTimeout(timer2);
+        setTimeout(async () => {
+          await finishMatchAndSave();
+          router.push("/results");
+        }, 4000);
       }, 1500);
-
-      return () => clearTimeout(timer1);
     }
-  }, [isFinished]);
+  }, [matchTick, matchInProgress, finishMatchAndSave, router]);
 
   // Auto-scroll feed
   const feedEndRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [events]);
+  }, [matchEvents]);
 
   if (!validation.valid) {
     return (
@@ -226,48 +181,16 @@ export default function MatchPage() {
 
   const handleStanceChange = (s: "balanced" | "aggressive" | "defensive") => {
     setStance(s);
-    engineRef.current?.intervene("home", { type: "stance_change", stance: s });
+    useGameStore.getState().matchEngine?.intervene("home", { type: "stance_change", stance: s });
   };
 
-  const finishMatch = async () => {
-    if (!engineRef.current || !supabase) return;
-    const matchOutcome = engineRef.current.getResult();
-    const { data: user } = await supabase.auth.getUser();
-
-    // Save match record to Supabase
-    await supabase.from('matches').insert({
-      home_user_id: user.user?.id,
-      away_user_name: opponentInfo?.name || "AI", // Note: adding this for better record keeping
-      home_score: score.home,
-      away_score: score.away,
-      winner_id: matchOutcome.result.outcome === "win" ? user.user?.id : null,
-      match_data: {
-        timeline: engineRef.current.getTimeline(),
-        playerStats: matchOutcome.playerStats
-      }
-    });
-
-    setMatchResult({
-      id: crypto.randomUUID(),
-      userId: user.user?.id || "local",
-      squadId: "squad_1",
-      opponentSeed: 0,
-      result: matchOutcome.result,
-      playerStats: matchOutcome.playerStats,
-      rewards: { xp: 50, currency: 25 },
-      timeline: engineRef.current.getTimeline(),
-      createdAt: new Date().toISOString(),
-    });
-    addRewards(50, 25);
-    router.push("/results");
-  };
-
-
-  const progress = (tick / totalTicks) * 100;
+  const currentStance = stance;
+  const currentCommand = command;
+  const progress = (matchTick / totalTicks) * 100;
 
   return (
     <div className="fixed inset-0 top-[57px] flex flex-col lg:flex-row overflow-hidden bg-surface">
-      {/* 1. ARENA SECTION (TOP on mobile, LEFT on desktop) */}
+      {/* 1. ARENA SECTION */}
       <div className="flex-1 flex flex-col bg-[#05070e] relative overflow-hidden min-h-0 lg:border-r border-border">
         {/* Progress bar */}
         <div className="h-1 w-full bg-white/5 absolute top-0 left-0 z-20">
@@ -284,7 +207,7 @@ export default function MatchPage() {
             <div className="flex flex-col items-center lg:items-start gap-1 lg:gap-2">
               <div className="text-[8px] lg:text-[10px] text-accent/70 uppercase tracking-[0.2em] font-black">Tu</div>
               <div className="text-2xl lg:text-5xl font-black tabular-nums text-white italic leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
-                {score.home}
+                {matchScore.home}
               </div>
               <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{playstyle.replace(/_/g, " ")}</div>
             </div>
@@ -293,21 +216,35 @@ export default function MatchPage() {
             <div className="flex flex-col items-center justify-center">
               <div className="bg-white/5 border border-white/10 px-3 py-1 rounded-full mb-2">
                  <div className="text-xs lg:text-base font-black text-foreground/80 font-mono tabular-nums leading-none">
-                  {tickToMatchTime(tick, totalTicks)}
+                  {tickToMatchTime(matchTick, totalTicks)}
                  </div>
               </div>
               {isSearching && (
                 <div className="text-[8px] text-accent animate-pulse font-black uppercase tracking-widest">Analisi avversario...</div>
               )}
-              {!isSearching && !isFinished && (
+              {!isSearching && matchInProgress && (
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
                   <span className="text-[8px] text-muted uppercase tracking-widest font-black">Live Match</span>
                 </div>
               )}
-              {isFinished && (
+              {!matchInProgress && matchTick >= totalTicks && (
                 <div className="text-[8px] text-muted uppercase tracking-widest font-black">Fischio Finale</div>
               )}
+            </div>
+
+            {/* Audio Toggle */}
+            <div className="absolute top-6 right-4 lg:right-6 flex items-center gap-2">
+               <button 
+                onClick={() => setMuted(!isMuted)}
+                className="p-2 rounded-full bg-white/5 border border-white/10 text-muted hover:text-white transition-all shadow-lg"
+               >
+                 {isMuted ? (
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M168,128a12,12,0,0,1-12,12H100a12,12,0,0,1,0-24h56A12,12,0,0,1,168,128Zm70.49,102.51a12,12,0,0,1-17,17l-192-192a12,12,0,0,1,17-17l36.56,36.56A27.84,27.84,0,0,1,104,70.52V40a12,12,0,0,1,19.34-9.6l24,18H152a12,12,0,0,1,0,24h-1.33l19.5,14.62,11.83,11.83h0l56.49,56.5ZM104,116.52l12.56,12.56-11.41,8.56A12,12,0,0,1,84.7,128V70.52a4,4,0,0,1,1.15-2.82Zm120,11.48H200a12,12,0,0,1,0-24h24a12,12,0,0,1,0,24Zm-24-36a12,12,0,0,1-12-12v-8a12,12,0,0,1,24,0v8A12,12,0,0,1,200,92Zm0,72a12,12,0,0,1-12-12v-16a12,12,0,0,1,24,0v16A12,12,0,0,1,200,164Z"></path></svg>
+                 ) : (
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M152,72h-4.3l-24.36-18.27A12,12,0,0,0,104,50.14V40a12,12,0,0,0-19.34-9.6L37.2,66.1a11.9,11.9,0,0,0-5.2,9.9V180a12,12,0,0,0,19.34,9.6L104,150.14v39.38a12,12,0,0,0,19.34,9.6L147.7,180.85A12,12,0,0,0,155,171.21V81.64A12,12,0,0,0,147.7,72ZM84,151a12,12,0,0,0-4.66,0.94L52,170.83V81.3l27.34,20.5a12,12,0,0,0,19.34-9.6V71.4l5.32,4V184.6ZM200,104a12,12,0,0,0-12,12v24a12,12,0,0,0,24,0V116A12,12,0,0,0,200,104Zm40,0a12,12,0,0,0-12,12v24a12,12,0,0,0,24,0V116A12,12,0,0,0,240,104Z"></path></svg>
+                 )}
+               </button>
             </div>
 
             {/* Away Team */}
@@ -316,22 +253,20 @@ export default function MatchPage() {
                 {opponentInfo?.name || "CPU"}
               </div>
               <div className="text-2xl lg:text-5xl font-black tabular-nums text-rose-500 italic leading-none drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]">
-                {score.away}
+                {matchScore.away}
               </div>
               <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{opponentInfo?.playstyle || "Standard"}</div>
             </div>
           </div>
         </div>
 
-        {/* Phaser Canvas */}
+        {/* Empty placeholder - PhaserGame is in the overlay */}
         <div className="flex-1 relative overflow-hidden h-[35vh] lg:h-auto border-y border-white/5 lg:border-none">
-          <PhaserGame />
         </div>
       </div>
 
-      {/* 2. CONTROLS & FEED SECTION (BOTTOM on mobile, RIGHT on desktop) */}
+      {/* 2. CONTROLS & FEED SECTION */}
       <div className="w-full lg:w-96 flex flex-col bg-surface overflow-hidden h-[40vh] lg:h-full">
-        {/* Mobile Tabs */}
         <div className="flex lg:hidden border-b border-border bg-black/20">
           <button 
             onClick={() => setActiveTab("feed")}
@@ -351,21 +286,19 @@ export default function MatchPage() {
           </button>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Feed Content */}
           <div className={`flex-1 flex flex-col min-h-0 ${activeTab === "tactics" ? "hidden lg:flex" : "flex"}`}>
             <div className="hidden lg:flex p-4 border-b border-border bg-black/10">
               <span className="text-[10px] text-muted uppercase tracking-widest font-black">LIVE CHRONICLE</span>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 font-mono text-[10px] lg:text-xs bg-black/10">
-              {events.length === 0 && (
+              {matchEvents.length === 0 && (
                 <div className="text-center text-muted/30 italic py-12 flex flex-col items-center gap-3">
                   <div className="w-8 h-8 rounded-full border border-dashed border-white/10 animate-spin" />
-                  {phaserReady ? "Awaiting kick-off..." : "Initializing data streams..."}
+                  {isSearching ? "Analisi avversario..." : "Waiting for kick-off..."}
                 </div>
               )}
-              {events.map((e, idx) => {
+              {matchEvents.map((e, idx) => {
                 const isGoal = e.type === "goal";
                 const isBreak = e.type === "halftime" || e.type === "full_time";
                 return (
@@ -392,12 +325,9 @@ export default function MatchPage() {
             </div>
           </div>
 
-          {/* Tactical Controls */}
           <div className={`shrink-0 p-4 lg:p-6 space-y-6 lg:space-y-8 bg-surface border-t border-border shadow-2xl z-20 ${
               activeTab === "feed" ? "hidden lg:block" : "block"
             }`}>
-
-
             <div className="space-y-4">
               <div>
                 <div className="text-[9px] text-muted uppercase tracking-[0.3em] font-black mb-3 ml-1">Team Stance</div>
@@ -406,7 +336,7 @@ export default function MatchPage() {
                     <button
                       key={s}
                       onClick={() => handleStanceChange(s)}
-                      disabled={isFinished}
+                      disabled={!matchInProgress}
                       className={`flex-1 py-3 lg:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                         stance === s
                           ? "bg-accent text-black border-accent shadow-xl shadow-accent/10"
@@ -426,7 +356,7 @@ export default function MatchPage() {
                     <button
                       key={c}
                       onClick={() => setCommand(c)}
-                      disabled={isFinished}
+                      disabled={!matchInProgress}
                       className={`py-3 lg:py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                         command === c
                           ? "bg-accent/20 text-accent border-accent/40 shadow-lg"
@@ -440,15 +370,10 @@ export default function MatchPage() {
               </div>
 
               <button 
-                onClick={() => {
-                  if (ultimateCharge >= 100) {
-                    // Trigger ultimate logic
-                    setUltimateCharge(0);
-                  }
-                }}
-                disabled={isFinished || ultimateCharge < 100}
+                onClick={() => ultimateReady && activateUltimate()}
+                disabled={!matchInProgress || !ultimateReady}
                 className={`w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] transition-all relative overflow-hidden border ${
-                  ultimateCharge >= 100 
+                  ultimateReady 
                     ? "bg-accent text-black border-accent animate-pulse shadow-[0_0_20px_rgba(251,191,36,0.3)] cursor-pointer" 
                     : "bg-white/5 text-muted/30 border-dashed border-border cursor-not-allowed"
                 }`}
@@ -458,7 +383,7 @@ export default function MatchPage() {
                   style={{ width: `${ultimateCharge}%` }}
                 />
                 <span className="relative z-10">
-                  {ultimateCharge >= 100 ? "⚡ ULTIMATE READY!" : `⚡ Ultimate Charge: ${ultimateCharge}%`}
+                  {ultimateReady ? "⚡ ACTIVATE ULTIMATE" : `⚡ Ultimate Charge: ${ultimateCharge}%`}
                 </span>
               </button>
             </div>
@@ -473,22 +398,22 @@ export default function MatchPage() {
             <div>
               <div className="text-muted text-xs font-black uppercase tracking-[0.4em] mb-4">Final Score</div>
               <div className="flex items-center justify-center gap-8 lg:gap-12">
-                <div className="text-5xl lg:text-7xl font-black italic text-accent">{score.home}</div>
+                <div className="text-5xl lg:text-7xl font-black italic text-accent">{matchScore.home}</div>
                 <div className="text-2xl lg:text-3xl text-muted font-light px-4 border-x border-white/10">VS</div>
-                <div className="text-5xl lg:text-7xl font-black italic text-rose-500">{score.away}</div>
+                <div className="text-5xl lg:text-7xl font-black italic text-rose-500">{matchScore.away}</div>
               </div>
             </div>
 
             <div className="space-y-2">
               <h2 className={`text-4xl lg:text-6xl font-black uppercase italic leading-none ${
-                score.home > score.away ? "text-accent animate-pulse" : score.home < score.away ? "text-rose-500" : "text-white"
+                matchScore.home > matchScore.away ? "text-accent animate-pulse" : matchScore.home < matchScore.away ? "text-rose-500" : "text-white"
               }`}>
-                {score.home > score.away ? "Vittoria!" : score.home < score.away ? "Sconfitta" : "Pareggio"}
+                {matchScore.home > matchScore.away ? "Vittoria!" : matchScore.home < matchScore.away ? "Sconfitta" : "Pareggio"}
               </h2>
               <p className="text-muted text-xs lg:text-sm font-medium tracking-wide">
-                {score.home > score.away 
+                {matchScore.home > matchScore.away 
                   ? "Ottima prestazione! Il tuo team ha dominato il campo." 
-                  : score.home < score.away 
+                  : matchScore.home < matchScore.away 
                   ? "Non scoraggiarti. Analizza la tattica e riprova!" 
                   : "Un match equilibrato fino all'ultimo secondo."}
               </p>

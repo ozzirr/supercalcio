@@ -6,6 +6,9 @@ import type { PlayerDefinition } from "@/types/player";
 type InitData = {
   homeRoster: PlayerDefinition[];
   awayRoster: PlayerDefinition[];
+  stadiumId?: string;
+  kitId?: string;
+  badgeId?: string;
 };
 
 type PlayerRole = "GK" | "DEF" | "MID" | "ATK";
@@ -81,13 +84,15 @@ export class MatchScene extends Phaser.Scene {
   }
 
   preload() {
-    const players = [
+    // Standard portraits - we load all since they are light, but we could optimize if needed
+    const portraits = [
       "aegis", "blaze", "phantom", "volt", "titan", "hawk",
       "goliath", "viper", "rampart", "oracle", "avalanche", "zenith",
       "maestro", "chronos", "nova", "mirage", "sniper", "juggernaut", "venom", "apex",
     ];
-    players.forEach(p => this.load.image(`portrait-${p}`, `/portraits/${p}.png`));
+    portraits.forEach(p => this.load.image(`portrait-${p}`, `/portraits/${p}.png`));
 
+    // Audio assets
     this.load.audio("whistle", "/audio/match/whistle.mp3");
     this.load.audio("goal",    "/audio/match/goal.mp3");
     this.load.audio("save",    "/audio/match/save.mp3");
@@ -127,11 +132,13 @@ export class MatchScene extends Phaser.Scene {
     EventBus.on("init-match",      this.initMatchHandler);
     EventBus.on("match-event",     this.matchEventHandler);
     EventBus.on("match-finished",  this.matchFinishedHandler);
+    EventBus.on("activate-ultimate", () => this.onActivateUltimate());
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off("init-match",     this.initMatchHandler);
       EventBus.off("match-event",    this.matchEventHandler);
       EventBus.off("match-finished", this.matchFinishedHandler);
+      EventBus.removeAllListeners("activate-ultimate");
     });
 
     const DT = 16;
@@ -182,9 +189,35 @@ export class MatchScene extends Phaser.Scene {
           const pScale = 0.65 + (p.worldY / LOGIC_H) * 0.65;
           p.container.setScale(pScale);
           p.container.setDepth(100 + p.worldY);
+
+          // --- Ultimate Ready Pulse ---
+          if (this.ultimateCharge >= 100 && p.isHome) {
+            if (!p.container.data?.get("ultimatePulse")) {
+              const tween = this.tweens.add({
+                targets: p.container,
+                scale: pScale * 1.1,
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+                ease: "Sine.easeInOut"
+              });
+              p.container.setData("ultimatePulse", tween);
+              // Add a subtle glow/tint to the card if possible
+              p.card.setStrokeStyle(4, 0xfbbf24, 1);
+            }
+          } else if (p.container.data?.get("ultimatePulse")) {
+            const tween = p.container.data.get("ultimatePulse") as Phaser.Tweens.Tween;
+            tween.stop();
+            p.container.setData("ultimatePulse", null);
+            p.container.setScale(pScale);
+            p.card.setStrokeStyle(2.5, p.isHome ? 0x6366f1 : 0xf43f5e, 1);
+          }
         });
 
         EventBus.emit("ultimate-update", this.ultimateCharge);
+        if (this.ultimateCharge >= 100) {
+          EventBus.emit("ultimate-ready", true);
+        }
 
         if (this.ball) {
           const bsx = this.getScreenX(this.ballWorldX, this.ballWorldY);
@@ -245,28 +278,97 @@ export class MatchScene extends Phaser.Scene {
     p.targetY = Phaser.Math.Clamp(pulledY, p.baseY - laneRadius, p.baseY + laneRadius);
   }
 
+  private equippedStadium = "stadium_default";
+  private equippedKit = "kit_default";
+  private badgeId = "badge_lightning";
+
+  private getBadgeEmoji(id: string) {
+    const badges: Record<string, string> = {
+      badge_dragon: "🐉",
+      badge_lightning: "🛡️",
+      badge_crown: "👑",
+    };
+    return badges[id] || "🛡️";
+  }
+
   private drawPitch() {
     const { screenW, screenH } = this;
+    const stadium = this.equippedStadium;
+
+    // Theme Configs
+    const themes: Record<string, any> = {
+      stadium_default: {
+        bg: [0x060c1a, 0x060c1a, 0x0a162d, 0x0a162d],
+        grass1: 0x0e1c3a,
+        grass2: 0x0a162d,
+        lines: 0x3b82f6,
+        goals: 0x60a5fa
+      },
+      stadium_neon: {
+        bg: [0x0f0b1e, 0x0f0b1e, 0x1a0b2e, 0x1a0b2e],
+        grass1: 0x221144,
+        grass2: 0x1a0b2e,
+        lines: 0x8b5cf6, // Purple neon
+        goals: 0xd8b4fe
+      },
+      stadium_retro: {
+        bg: [0x14532d, 0x14532d, 0x166534, 0x166534], // Darkest green
+        grass1: 0x15803d, // Mid green
+        grass2: 0x166534, // Dark green
+        lines: 0xfacc15, // Retro yellow lines
+        goals: 0xfef08a
+      }
+    };
+
+    const t = themes[stadium] || themes.stadium_default;
+
     const g = this.add.graphics();
-    g.fillGradientStyle(0x060c1a, 0x060c1a, 0x0a162d, 0x0a162d, 1);
+    g.fillGradientStyle(t.bg[0], t.bg[1], t.bg[2], t.bg[3], 1);
     g.fillRect(0, 0, screenW, screenH);
 
     const getX = (wx: number, wy: number) => this.getScreenX(wx, wy);
     const getY = (wy: number) => this.getScreenY(wy);
 
-    for (let i = 0; i < 10; i++) {
-      g.fillStyle(i % 2 === 0 ? 0x0e1c3a : 0x0a162d, 0.4);
-      const yS = i * (LOGIC_H / 10), yE = (i + 1) * (LOGIC_H / 10);
-      const points = [
-        new Phaser.Math.Vector2(getX(0, yS),       getY(yS)),
-        new Phaser.Math.Vector2(getX(LOGIC_W, yS), getY(yS)),
-        new Phaser.Math.Vector2(getX(LOGIC_W, yE), getY(yE)),
-        new Phaser.Math.Vector2(getX(0, yE),       getY(yE)),
-      ];
-      g.fillPoints(points, true);
+    // Dynamic grid/stripes based on theme
+    if (stadium === "stadium_retro") {
+      // Checkerboard for retro
+      const cols = 12;
+      const rows = 8;
+      const w = LOGIC_W / cols;
+      const h = LOGIC_H / rows;
+      for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+          if ((x + y) % 2 === 0) {
+            g.fillStyle(t.grass1, 0.4);
+            const xS = x * w, xE = (x+1) * w;
+            const yS = y * h, yE = (y+1) * h;
+            const points = [
+              new Phaser.Math.Vector2(getX(xS, yS), getY(yS)),
+              new Phaser.Math.Vector2(getX(xE, yS), getY(yS)),
+              new Phaser.Math.Vector2(getX(xE, yE), getY(yE)),
+              new Phaser.Math.Vector2(getX(xS, yE), getY(yE)),
+            ];
+            g.fillPoints(points, true);
+          }
+        }
+      }
+    } else {
+      // Classic horizontal stripes for others
+      for (let i = 0; i < 10; i++) {
+        g.fillStyle(i % 2 === 0 ? t.grass1 : t.grass2, 0.4);
+        const yS = i * (LOGIC_H / 10), yE = (i + 1) * (LOGIC_H / 10);
+        const points = [
+          new Phaser.Math.Vector2(getX(0, yS),       getY(yS)),
+          new Phaser.Math.Vector2(getX(LOGIC_W, yS), getY(yS)),
+          new Phaser.Math.Vector2(getX(LOGIC_W, yE), getY(yE)),
+          new Phaser.Math.Vector2(getX(0, yE),       getY(yE)),
+        ];
+        g.fillPoints(points, true);
+      }
     }
 
-    g.lineStyle(2, 0x3b82f6, 0.3);
+    // Lines
+    g.lineStyle(2, t.lines, stadium === "stadium_neon" ? 0.6 : 0.3);
     const borderPoints = [
       new Phaser.Math.Vector2(getX(20, 20),              getY(20)),
       new Phaser.Math.Vector2(getX(LOGIC_W - 20, 20),    getY(20)),
@@ -278,14 +380,22 @@ export class MatchScene extends Phaser.Scene {
     g.lineBetween(getX(LOGIC_W / 2, 20), getY(20), getX(LOGIC_W / 2, LOGIC_H - 20), getY(LOGIC_H - 20));
 
     g.beginPath();
-    for (let a = 0; a <= Math.PI * 2; a += 0.2) {
+    const circleRes = stadium === "stadium_retro" ? 0.4 : 0.2;
+    for (let a = 0; a <= Math.PI * 2; a += circleRes) {
       const px = getX(LOGIC_W / 2 + Math.cos(a) * 120, LOGIC_H / 2 + Math.sin(a) * 80);
       const py = getY(LOGIC_H / 2 + Math.sin(a) * 80);
       if (a === 0) g.moveTo(px, py); else g.lineTo(px, py);
     }
     g.strokePath();
 
-    g.lineStyle(6, 0x60a5fa, 0.8);
+    // Neon glow effect if applicable
+    if (stadium === "stadium_neon") {
+       g.lineStyle(4, t.lines, 0.2);
+       g.strokePath();
+    }
+
+    // Goals
+    g.lineStyle(6, t.goals, 0.8);
     const goalY1 = LOGIC_H / 2 - 80, goalY2 = LOGIC_H / 2 + 80;
     g.lineBetween(getX(20, goalY1),          getY(goalY1), getX(20, goalY2),          getY(goalY2));
     g.lineBetween(getX(LOGIC_W - 20, goalY1), getY(goalY1), getX(LOGIC_W - 20, goalY2), getY(goalY2));
@@ -302,6 +412,11 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onInitMatch(data: InitData) {
+    if (!this.add) return;
+    this.equippedStadium = data.stadiumId || "stadium_default";
+    this.equippedKit = data.kitId || "kit_default";
+    this.badgeId = data.badgeId || "badge_lightning";
+    this.drawPitch(); // Redraw pitch with new theme
     this.playerMap.forEach(p => p.container.destroy());
     this.playerMap.clear();
 
@@ -335,8 +450,26 @@ export class MatchScene extends Phaser.Scene {
 
         const shadow     = this.add.ellipse(0, 35, 40, 15, 0x000000, 0.4);
         const cardWidth  = 50, cardHeight = 70;
-        const card       = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x111827, 0.95)
-                             .setStrokeStyle(2.5, isHome ? 0x6366f1 : 0xf43f5e, 1);
+        
+        // KIT COLORS
+        let cardBg = 0x111827;
+        let cardStroke = isHome ? 0x6366f1 : 0xf43f5e;
+        
+        if (isHome) {
+          if (this.equippedKit === "kit_black") {
+            cardBg = 0x0a0a0a;
+            cardStroke = 0xfbbf24; // Gold details
+          } else if (this.equippedKit === "kit_red") {
+            cardBg = 0x991b1b;
+            cardStroke = 0xffffff;
+          } else if (this.equippedKit === "kit_gold") {
+            cardBg = 0xca8a04;
+            cardStroke = 0xffffff;
+          }
+        }
+
+        const card       = this.add.rectangle(0, 0, cardWidth, cardHeight, cardBg, 0.95)
+                             .setStrokeStyle(2.5, cardStroke, 1);
         const portrait   = this.add.image(0, -10, `portrait-${p.portrait}`).setDisplaySize(42, 42);
 
         const roleLabel  = role;
@@ -348,8 +481,11 @@ export class MatchScene extends Phaser.Scene {
         const nameLabelBg = this.add.rectangle(0, 25, cardWidth - 10, 12, 0x000000, 0.6);
         const nameText    = this.add.text(0, 25, p.name.split(" ")[0],
                              { fontSize: "8px", color: "#ffffff" }).setOrigin(0.5);
-        const indicator   = this.add.circle(cardWidth / 2 - 6, -cardHeight / 2 + 6, 6,
-                             isHome ? 0x6366f1 : 0xf43f5e, 1).setStrokeStyle(1.5, 0xffffff, 1);
+        
+        // BADGE / INDICATOR
+        const badgeTag = isHome ? this.getBadgeEmoji(this.badgeId) : "🔴";
+        const indicator = this.add.text(cardWidth / 2 - 8, -cardHeight / 2 + 8, badgeTag, 
+                            { fontSize: "10px" }).setOrigin(0.5);
 
         container.add([shadow, card, portrait, roleBg, roleText, nameLabelBg, nameText, indicator]);
 
@@ -378,9 +514,17 @@ export class MatchScene extends Phaser.Scene {
 
     this.ballWorldX = LOGIC_W / 2;
     this.ballWorldY = LOGIC_H / 2;
+
+    // Reset ultimate charge for new match
+    this.ultimateCharge = 0;
+    EventBus.emit("ultimate-update", 0);
+
+    // Whistle at match start
+    try { this.sound.play("whistle", { volume: 0.5 }); } catch (e) {}
   }
 
   private onMatchEvent(event: MatchEvent) {
+    if (!this.add || !this.scene.isActive()) return;
     const actorId  = event.actorId
       ? (this.playerMap.has(`home-${event.actorId}`) ? `home-${event.actorId}` : `away-${event.actorId}`)
       : null;
@@ -463,6 +607,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private showClash(p1: PlayerDefinition, p2: PlayerDefinition | null, title: string) {
+    if (!this.add) return;
     const { screenW, screenH } = this;
     const overlay   = this.add.rectangle(0, 0, screenW, screenH, 0x000000, 0.8)
                         .setOrigin(0).setDepth(2000).setAlpha(0);
@@ -504,8 +649,40 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onMatchFinished() {
+    if (!this.cameras || !this.cameras.main) return;
     try { this.sound.play("whistle"); } catch (e) {}
     this.cameras.main.flash(500, 255, 255, 255);
     this.time.delayedCall(500, () => this.cameras.main.fade(1500, 5, 10, 20));
+  }
+
+  private onActivateUltimate() {
+    if (this.ultimateCharge < 100) return;
+    
+    // Visual "GOLPE" effect
+    this.cameras.main.flash(400, 251, 191, 36); // Yellow flash
+    this.cameras.main.shake(300, 0.01);
+    
+    // Apply temporary bonus to home team
+    this.ultimateCharge = 0;
+    EventBus.emit("ultimate-update", 0);
+    EventBus.emit("ultimate-ready", false);
+
+    // Show a "ULTIMATE ACTIVATED" text in the middle
+    const txt = this.add.text(this.screenW/2, this.screenH/2, "ULTIMATE ATTIVATA!", {
+      fontSize: "48px",
+      fontStyle: "italic bold",
+      color: "#fbbf24",
+      stroke: "#000000",
+      strokeThickness: 8
+    }).setOrigin(0.5).setDepth(3000).setScale(0);
+
+    this.tweens.add({
+      targets: txt,
+      scale: 1.2,
+      alpha: { from: 1, to: 0 },
+      duration: 1000,
+      ease: "Back.easeOut",
+      onComplete: () => txt.destroy()
+    });
   }
 }

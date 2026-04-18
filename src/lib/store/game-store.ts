@@ -1,9 +1,10 @@
 "use client";
 
 import { create } from "zustand";
+import { SHOP_ITEMS } from "@/content/shop";
 import type { PlayerDefinition } from "@/types/player";
 import type { Playstyle, LineupSlot } from "@/types/squad";
-import type { MatchRecord, TeamStance, TeamCommand } from "@/types/match";
+import type { MatchRecord, TeamStance, TeamCommand, MatchEvent } from "@/types/match";
 import { STARTER_PLAYERS } from "@/content/players";
 import { supabase } from "@/lib/supabase/client";
 
@@ -15,7 +16,17 @@ type GameState = {
 
   // Match
   currentMatch: MatchRecord | null;
+  // Match State (Global for PiP)
   matchInProgress: boolean;
+  matchFinished: boolean;
+  matchTick: number;
+  matchScore: { home: number; away: number };
+  matchEvents: MatchEvent[];
+  matchEngine: any | null;
+  matchInterval: NodeJS.Timeout | null;
+  opponentInfo: { name: string; badge: string; playstyle: string } | null;
+  
+  // HUD states
   stance: TeamStance;
   command: TeamCommand;
 
@@ -27,12 +38,25 @@ type GameState = {
   teamName: string;
   username: string;
   badgeId: string;
+  equippedStadium: string;
+  equippedKit: string;
   ownedPlayers: any[]; // User's roster with levels and bonuses
   isProfileModalOpen: boolean;
+  isMuted: boolean;
+  ultimateReady: boolean;
   setProfileModalOpen: (open: boolean) => void;
+  setMuted: (muted: boolean) => void;
+  setUltimateReady: (ready: boolean) => void;
+  activateUltimate: () => void;
   claimStarterPack: () => Promise<any[]>;
   resetRoster: () => Promise<void>;
   buyPack: (packType: "starter" | "premium") => Promise<any[]>;
+
+  // Global Match Lifecycle
+  startGlobalMatch: (engine: any, opponent: { name: string; badge: string; playstyle: string }) => void;
+  tickGlobalMatch: () => void;
+  stopGlobalMatch: () => void;
+  finishMatchAndSave: () => Promise<void>;
 
   // Actions
   setLineup: (lineup: LineupSlot[]) => void;
@@ -56,6 +80,7 @@ type GameState = {
   initializeUser: () => void;
   logout: () => void;
   saveSquad: () => Promise<void>;
+  clearMatchState: () => void;
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -65,6 +90,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   currentMatch: null,
   matchInProgress: false,
+  matchFinished: false,
+  matchTick: 0,
+  matchScore: { home: 0, away: 0 },
+  matchEvents: [],
+  matchEngine: null,
+  matchInterval: null,
+  opponentInfo: null,
+  
   stance: "balanced",
   command: "none",
 
@@ -75,9 +108,26 @@ export const useGameStore = create<GameState>((set, get) => ({
   teamName: "SC Squad",
   username: "Manager",
   badgeId: "badge_lightning",
+  equippedStadium: "stadium_default",
+  equippedKit: "kit_default",
   ownedPlayers: [],
   isProfileModalOpen: false,
+  isMuted: false,
+  ultimateReady: false,
   setProfileModalOpen: (open) => set({ isProfileModalOpen: open }),
+  setMuted: (muted) => set({ isMuted: muted }),
+  setUltimateReady: (ready) => set({ ultimateReady: ready }),
+  activateUltimate: () => {
+    const { ultimateReady } = get();
+    if (!ultimateReady) return;
+    
+    // Emit event to Phaser
+    import("@/game/EventBus").then(({ EventBus }) => {
+      EventBus.emit("activate-ultimate");
+    });
+    
+    set({ ultimateReady: false });
+  },
 
   setLineup: (lineup) => set({ lineup }),
 
@@ -145,16 +195,32 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     if (state.currency < cost || state.purchasedItems.includes(itemId)) return false;
     
+    const itemData = SHOP_ITEMS.find(i => i.id === itemId);
     const newItems = [...state.purchasedItems, itemId];
     const newCurrency = state.currency - cost;
 
-    set({ currency: newCurrency, purchasedItems: newItems });
+    const updates: any = { currency: newCurrency, purchasedItems: newItems };
+    
+    // Auto-equip if stadium or kit
+    if (itemData?.category === "stadium") {
+      updates.equippedStadium = itemId;
+    } else if (itemData?.category === "kit") {
+      updates.equippedKit = itemId;
+    }
+
+    set(updates);
 
     if (state.user && supabase) {
-      supabase.from('profiles').update({ 
+      const dbUpdates: any = { 
         currency: newCurrency, 
         purchased_items: newItems 
-      }).eq('id', state.user.id).then();
+      };
+      if (itemData?.category === "stadium") {
+        dbUpdates.equipped_stadium = itemId;
+      } else if (itemData?.category === "kit") {
+        dbUpdates.equipped_kit = itemId;
+      }
+      supabase.from('profiles').update(dbUpdates).eq('id', state.user.id).then();
     }
     return true;
   },
@@ -189,25 +255,34 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     if (!state.user) return false;
 
+    // VALIDATION: Ensure player is still owned locally before proceeding
+    if (!state.ownedPlayers.some(p => p.player_id === playerId)) {
+      console.warn(`Sell aborted: Player ${playerId} not in roster.`);
+      return false;
+    }
+
     // Remove from starting lineup if they are in it
     if (state.lineup.some(l => l.playerId === playerId)) {
       set({ lineup: state.lineup.filter(l => l.playerId !== playerId) });
       state.saveSquad();
     }
 
-    const { error } = await supabase.from('user_players').delete().eq('user_id', state.user.id).eq('player_id', playerId);
+    const { data: deleted, error } = await supabase.from('user_players').delete().eq('user_id', state.user.id).eq('player_id', playerId).select();
     
-    if (error) return false;
+    if (error || !deleted || deleted.length === 0) {
+      console.error("Delete failed or no rows matched:", error);
+      return false;
+    }
 
     const newCurrency = state.currency + refundAmount;
     set({ currency: newCurrency });
     await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
     
     // Refresh owned players
-    const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
-    if (data) {
-      set({ ownedPlayers: data });
-      const ownedDefs = STARTER_PLAYERS.filter(p => data.some((up: any) => up.player_id === p.id));
+    const { data: refreshed } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+    if (refreshed) {
+      set({ ownedPlayers: refreshed });
+      const ownedDefs = STARTER_PLAYERS.filter(p => refreshed.some((up: any) => up.player_id === p.id));
       set({ availablePlayers: ownedDefs });
     }
 
@@ -272,6 +347,8 @@ export const useGameStore = create<GameState>((set, get) => ({
               teamName: profile.team_name || "SC Squad",
               username: profile.username || "Manager",
               badgeId: profile.badge_id || "badge_lightning",
+              equippedStadium: profile.equipped_stadium || "stadium_default",
+              equippedKit: profile.equipped_kit || "kit_default",
               purchasedItems: profile.purchased_items || []
             });
           } else if (data.session?.user) {
@@ -394,9 +471,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     console.log("DEBUG: Resetting roster for user:", state.user.id);
     
     // Clear DB
-    await supabase.from('user_players').delete().eq('user_id', state.user.id);
+    const { data: deletedPlayers } = await supabase.from('user_players').delete().eq('user_id', state.user.id).select();
     await supabase.from('squads').delete().eq('user_id', state.user.id);
     
+    if (!deletedPlayers || deletedPlayers.length === 0) {
+      console.warn("Reset Roster: No players were deleted (roster might already be empty).");
+    }
+
     // Reset State
     set({ 
       ownedPlayers: [], 
@@ -447,6 +528,103 @@ export const useGameStore = create<GameState>((set, get) => ({
     return [picked];
   },
 
+  startGlobalMatch: (engine, opponent) => {
+    const { matchInterval } = get();
+    if (matchInterval) clearInterval(matchInterval);
+
+    const interval = setInterval(() => {
+      get().tickGlobalMatch();
+    }, 500);
+
+    set({
+      matchEngine: engine,
+      matchInterval: interval,
+      matchInProgress: true,
+      matchFinished: false,
+      matchTick: 0,
+      matchScore: { home: 0, away: 0 },
+      matchEvents: [],
+      opponentInfo: opponent,
+      stance: "balanced",
+      command: "none"
+    });
+  },
+
+  tickGlobalMatch: () => {
+    const { matchEngine, matchTick, matchEvents } = get();
+    if (!matchEngine) return;
+
+    const newEvents = matchEngine.tick();
+    const state = matchEngine.getState();
+
+    if (newEvents.length > 0) {
+      import("@/game/EventBus").then(({ EventBus }) => {
+        newEvents.forEach((e: MatchEvent) => EventBus.emit("match-event", e));
+      });
+      set({ matchEvents: [...matchEvents, ...newEvents] });
+    }
+
+    set({
+      matchTick: state.tick,
+      matchScore: { home: state.homeScore, away: state.awayScore }
+    });
+
+    if (state.phase === "finished") {
+      import("@/game/EventBus").then(({ EventBus }) => {
+        EventBus.emit("match-finished");
+      });
+      set({ matchFinished: true });
+      get().stopGlobalMatch();
+    }
+  },
+
+  stopGlobalMatch: () => {
+    const { matchInterval } = get();
+    if (matchInterval) clearInterval(matchInterval);
+    set({ matchInterval: null });
+  },
+
+  finishMatchAndSave: async () => {
+    const { matchEngine, matchScore, opponentInfo, user, addRewards, stopGlobalMatch } = get();
+    if (!matchEngine || !user || !supabase) return;
+
+    stopGlobalMatch();
+    const matchOutcome = matchEngine.getResult();
+
+    // Save to DB
+    await supabase.from('matches').insert({
+      home_user_id: user.id,
+      away_user_name: opponentInfo?.name || "AI",
+      home_score: matchScore.home,
+      away_score: matchScore.away,
+      winner_id: matchOutcome.result.outcome === "win" ? user.id : null,
+      match_data: {
+        timeline: matchEngine.getTimeline(),
+        playerStats: matchOutcome.playerStats
+      }
+    });
+
+    // Update store with final result record if needed (using existing setMatchResult or similar)
+    // But for simplicity, we just trigger rewards and let results page handle the rest
+    addRewards(50, 25);
+    
+    set({ 
+       matchInProgress: false,
+       matchFinished: true, // Keep it true for results display until cleared
+       currentMatch: {
+          id: crypto.randomUUID(),
+          userId: user.id,
+          squadId: "squad_1",
+          opponentSeed: 0,
+          result: matchOutcome.result,
+          playerStats: matchOutcome.playerStats,
+          rewards: { xp: 50, currency: 25 },
+          timeline: matchEngine.getTimeline(),
+          createdAt: new Date().toISOString(),
+       }
+    });
+  },
+
   saveSquad: async () => {
     const state = get();
     if (!state.user || state.lineup.length !== 5 || !supabase) return;
@@ -461,5 +639,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     await supabase.auth.signOut();
     set({ user: null });
     window.location.href = "/login";
+  },
+  
+  clearMatchState: () => {
+    const { matchInterval } = get();
+    if (matchInterval) clearInterval(matchInterval);
+    
+    set({
+      matchInProgress: false,
+      matchFinished: false,
+      matchTick: 0,
+      matchScore: { home: 0, away: 0 },
+      matchEvents: [],
+      matchEngine: null,
+      matchInterval: null,
+      opponentInfo: null
+    });
   }
 }));

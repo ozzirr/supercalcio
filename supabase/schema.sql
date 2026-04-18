@@ -7,6 +7,8 @@ CREATE TABLE public.profiles (
   username text UNIQUE NOT NULL,
   team_name text DEFAULT 'SC Squad',
   badge_id text DEFAULT 'badge_lightning',
+  equipped_stadium text DEFAULT 'stadium_default',
+  equipped_kit text DEFAULT 'kit_default',
   xp integer DEFAULT 0,
   currency integer DEFAULT 100,
   purchased_items text[] DEFAULT '{}',
@@ -65,6 +67,7 @@ CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USIN
 CREATE POLICY "Users can insert own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can insert own squad." ON public.squads FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own squad." ON public.squads FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own squad." ON public.squads FOR DELETE USING (auth.uid() = user_id);
 
 CREATE POLICY "Matches are viewable by everyone." ON public.matches FOR SELECT USING (true);
 CREATE POLICY "Authenticated users can insert matches." ON public.matches FOR INSERT WITH CHECK (auth.uid() = home_user_id);
@@ -85,6 +88,7 @@ ALTER TABLE public.user_players ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "User players are viewable by everyone." ON public.user_players FOR SELECT USING (true);
 CREATE POLICY "Users can update own players." ON public.user_players FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own players." ON public.user_players FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own players." ON public.user_players FOR DELETE USING (auth.uid() = user_id);
 
 -- 5. Market Players
 CREATE TABLE public.market_players (
