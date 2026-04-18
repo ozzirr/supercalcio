@@ -9,7 +9,7 @@ type ShopItem = {
   description: string;
   cost: number;
   emoji: string;
-  category: "stadium" | "badge" | "upgrade" | "kit";
+  category: "stadium" | "badge" | "upgrade" | "kit" | "pack";
   comingSoon?: boolean;
   packType?: "starter" | "premium";
 };
