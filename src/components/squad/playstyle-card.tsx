@@ -34,20 +34,31 @@ export function PlaystyleCard({ playstyle, selected, onClick }: PlaystyleCardPro
   return (
     <button
       onClick={onClick}
-      className={`card card-hover p-4 text-left transition-all w-full ${
-        selected ? "border-accent ring-1 ring-accent bg-accent/5 scale-[1.02] shadow-[0_0_24px_rgba(251,191,36,0.15)]" : "border-white/5"
+      className={`card border-2 transition-all w-full text-left relative overflow-hidden ${
+        selected 
+          ? "border-accent bg-accent/10 shadow-[0_0_30px_rgba(251,191,36,0.2)] scale-[1.02]" 
+          : "border-white/5 bg-white/5 opacity-60 hover:opacity-100 hover:border-white/20"
       }`}
     >
-      <div className="font-semibold mb-1">{playstyle.name}</div>
-      <p className="text-xs text-muted leading-relaxed mb-3">{playstyle.description}</p>
+      {selected && (
+        <div className="absolute top-0 right-0 p-2">
+          <div className="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_10px_#fbbf24]" />
+        </div>
+      )}
+      <div className="p-4">
+        <div className={`font-black uppercase italic tracking-tight mb-1 ${selected ? "text-accent" : "text-white"}`}>
+          {playstyle.name}
+        </div>
+        <p className="text-xs text-muted leading-relaxed mb-3">{playstyle.description}</p>
 
-      <div className="space-y-1.5">
-        {Object.entries(mods).map(([key, value]) => (
-          <div key={key} className="flex items-center gap-2">
-            <span className="text-[10px] text-muted w-14 uppercase tracking-wide">{MODIFIER_LABELS[key]}</span>
-            {modifierBar(value, key === "possessionBias")}
-          </div>
-        ))}
+        <div className="space-y-1.5">
+          {Object.entries(mods).map(([key, value]) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="text-[10px] text-muted w-14 uppercase tracking-wide">{MODIFIER_LABELS[key]}</span>
+              {modifierBar(value, key === "possessionBias")}
+            </div>
+          ))}
+        </div>
       </div>
     </button>
   );

@@ -24,7 +24,9 @@ export default function SquadPage() {
     clearLineup,
     autoFillLineup,
     setPlaystyle,
-    saveSquad
+    saveSquad,
+    claimStarterPack,
+    resetRoster
   } = useGameStore();
 
   const router = useRouter();
@@ -33,6 +35,8 @@ export default function SquadPage() {
   const [modalPlayer, setModalPlayer] = useState<PlayerDefinition | null>(null);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [dragSource, setDragSource] = useState<number | null>(null);
+  const [isOpening, setIsOpening] = useState(false);
+  const [revealedPlayers, setRevealedPlayers] = useState<PlayerDefinition[] | null>(null);
 
   const validation = validateSquad(lineup, availablePlayers);
   const assignedIds = new Set(lineup.map((s) => s.playerId));
@@ -98,33 +102,77 @@ export default function SquadPage() {
       {/* Left panel: Roster (Moved to bottom on mobile, side on desktop) */}
       <div className="order-2 lg:order-1 w-full lg:w-72 border-t lg:border-t-0 lg:border-r border-border flex flex-col h-1/2 lg:h-full">
         <div className="p-4 pb-2 flex items-center justify-between bg-surface/50 backdrop-blur-md">
-          <h2 className="text-[10px] lg:text-sm font-black uppercase tracking-[0.2em] text-muted">Manager Roster</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-[10px] lg:text-sm font-black uppercase tracking-[0.2em] text-muted">Manager Roster</h2>
+            {availablePlayers.length > 0 && (
+              <button 
+                onClick={() => {
+                  if (confirm("Sei sicuro di voler resettare il roster? Tutti i giocatori e la formazione verranno eliminati.")) {
+                    resetRoster();
+                  }
+                }}
+                className="p-1 text-muted hover:text-danger hover:bg-danger/10 rounded transition-all"
+                title="Resetta Roster"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+            )}
+          </div>
           <span className="text-[10px] text-accent font-bold uppercase">{availablePlayers.length} Players</span>
         </div>
         <div className="flex-1 overflow-y-auto p-4 pt-2 space-y-2 bg-black/20">
-          {availablePlayers.map((player) => {
-            const inSquad = assignedIds.has(player.id);
-            return (
-              <div key={player.id} className="relative">
-                {inSquad && (
-                  <div className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-accent text-black flex items-center justify-center shadow-lg">
-                    <span className="text-[10px] font-black">✓</span>
-                  </div>
-                )}
-                <PlayerCard
-                  player={player}
-                  compact
-                  selected={selectedPlayer?.id === player.id}
-                  onClick={() => {
-                    setSelectedPlayer(player);
-                    if (activeSlot !== null && !inSquad) {
-                      handleAssign(player);
-                    }
-                  }}
-                />
+          {availablePlayers.length > 0 ? (
+            availablePlayers.map((player) => {
+              const inSquad = assignedIds.has(player.id);
+              return (
+                <div key={player.id} className="relative">
+                  {inSquad && (
+                    <div className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-accent text-black flex items-center justify-center shadow-lg">
+                      <span className="text-[10px] font-black">✓</span>
+                    </div>
+                  )}
+                  <PlayerCard
+                    player={player}
+                    compact
+                    selected={selectedPlayer?.id === player.id}
+                    onClick={() => {
+                      setSelectedPlayer(player);
+                      if (activeSlot !== null && !inSquad) {
+                        handleAssign(player);
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
+              <div className="text-4xl animate-bounce">📦</div>
+              <div>
+                <div className="text-[10px] font-black uppercase text-accent tracking-widest mb-1">Roster Vuoto</div>
+                <div className="text-[9px] text-muted leading-tight uppercase font-bold">Sembra che i tuoi utenti storici non abbiano ancora ricevuto il pacchetto iniziale.</div>
               </div>
-            );
-          })}
+              <button 
+                onClick={async () => {
+                  setIsOpening(true);
+                  // Simulate opening delay
+                  setTimeout(async () => {
+                    const players = await claimStarterPack();
+                    setIsOpening(false);
+                    if (players && players.length > 0) {
+                      setRevealedPlayers(players);
+                    }
+                  }, 2000);
+                }}
+                className="w-full py-3 bg-accent text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-accent/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                Riscatta Starter Pack
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -154,6 +202,11 @@ export default function SquadPage() {
               Start Match
             </button>
           </div>
+        </div>
+
+        {/* Team Summary - Moved to Top */}
+        <div className="px-6 lg:px-8 mt-4 lg:mt-6">
+           <TeamSummary players={squadPlayers} />
         </div>
 
         <div className="p-6 lg:p-8 space-y-8 lg:space-y-10">
@@ -249,10 +302,7 @@ export default function SquadPage() {
             </div>
           </div>
 
-          {/* Team Summary — compact HUD bar */}
-          <div className="pb-10 lg:pb-0">
-            <TeamSummary players={squadPlayers} />
-          </div>
+          {/* Team Summary removed from bottom */}
         </div>
       </div>
 
@@ -304,6 +354,71 @@ export default function SquadPage() {
           assignLabel={activeSlot !== null ? `Assign to ${POSITION_LABELS[activeSlot]}` : "Add to Squad"}
           isAssigned={assignedIds.has(modalPlayer.id)}
         />
+      )}
+
+      {/* Pack Opening Animation Overlay */}
+      {isOpening && (
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center animate-in fade-in duration-700">
+           <div className="relative">
+             <div className="w-56 h-72 lg:w-72 lg:h-96 bg-accent/20 border-4 border-accent border-dashed rounded-[32px] flex items-center justify-center animate-bounce shadow-[0_0_100px_rgba(251,191,36,0.3)]">
+                <span className="text-8xl lg:text-9xl drop-shadow-2xl">📦</span>
+             </div>
+             <div className="absolute inset-x-0 -bottom-12 flex flex-col items-center">
+                <div className="h-1 w-48 bg-accent/20 rounded-full overflow-hidden">
+                   <div className="h-full bg-accent animate-progress w-full"></div>
+                </div>
+                <h2 className="text-2xl lg:text-3xl font-black uppercase italic text-accent mt-6 animate-pulse tracking-tighter">Preparazione Roster...</h2>
+             </div>
+           </div>
+        </div>
+      )}
+
+      {/* Revealed Players Modal (Starter Pack Grid) */}
+      {revealedPlayers && (
+        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 lg:p-8 overflow-y-auto">
+          <div className="max-w-5xl w-full py-12 animate-in zoom-in-95 fade-in duration-500">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent text-[10px] uppercase tracking-[0.3em] font-black mb-4">
+                Starter Pack Sbloccato
+              </div>
+              <h1 className="text-4xl lg:text-6xl font-black uppercase italic tracking-tighter text-white">I TUOI <span className="text-accent underline decoration-4">CAMPIONI</span></h1>
+              <p className="text-muted text-xs lg:text-sm mt-4 uppercase tracking-widest font-bold">Questi sono i primi 7 guerrieri del tuo impero.</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-12">
+              {revealedPlayers.map((player, idx) => (
+                <div 
+                  key={player.id} 
+                  onClick={() => setModalPlayer(player)}
+                  className="animate-in slide-in-from-bottom-8 fade-in flex-1 cursor-pointer group"
+                  style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
+                >
+                  <div className="relative">
+                    <div className="aspect-[4/5] rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-accent transition-all shadow-xl group-hover:scale-[1.05] duration-300">
+                       <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+                       <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black to-transparent">
+                          <div className="font-black uppercase italic text-[10px] lg:text-xs truncate text-white">{player.name}</div>
+                          <div className="text-[8px] lg:text-[10px] text-accent font-black uppercase tracking-widest">{player.tier}</div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-center">
+              <button 
+                onClick={() => {
+                  setRevealedPlayers(null);
+                  autoFillLineup();
+                }}
+                className="btn-primary px-12 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(251,191,36,0.2)] hover:scale-105 active:scale-95 transition-all"
+              >
+                Inizia la Scalata →
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -56,14 +56,14 @@ export default function LeaderboardPage() {
 
       <div className="max-w-4xl mx-auto px-4 lg:px-8 pb-16">
         <div className="card overflow-hidden border-white/5 bg-white/5">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[500px]">
+          <div className="overflow-x-clip min-w-0">
+            <table className="w-full text-left border-collapse table-fixed lg:table-auto">
               <thead>
-                <tr className="border-b border-white/5 bg-white/5">
-                  <th className="px-4 lg:px-6 py-4 text-[9px] uppercase tracking-widest text-muted font-bold">Pos</th>
-                  <th className="px-4 lg:px-6 py-4 text-[9px] uppercase tracking-widest text-muted font-bold">Manager / Team</th>
-                  <th className="px-4 lg:px-6 py-4 text-[9px] uppercase tracking-widest text-muted font-bold text-right">XP</th>
-                  <th className="px-4 lg:px-6 py-4 text-[9px] uppercase tracking-widest text-muted font-bold text-right">Livello</th>
+                <tr className="border-b border-white/5 bg-white/5 text-[8px] lg:text-[10px]">
+                  <th className="w-10 lg:w-20 px-2 lg:px-6 py-4 uppercase tracking-widest text-muted font-bold">Pos</th>
+                  <th className="px-2 lg:px-6 py-4 uppercase tracking-widest text-muted font-bold">Team</th>
+                  <th className="w-12 lg:w-24 px-2 lg:px-6 py-4 uppercase tracking-widest text-muted font-bold text-right">XP</th>
+                  <th className="w-10 lg:w-20 px-2 lg:px-6 py-4 uppercase tracking-widest text-muted font-bold text-right">LVL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -91,8 +91,8 @@ export default function LeaderboardPage() {
                         onClick={() => setSelectedUserId(entry.id)}
                         className={`group cursor-pointer transition-colors ${isCurrentUser ? "bg-accent/10" : "hover:bg-white/5"}`}
                       >
-                        <td className="px-4 lg:px-6 py-5">
-                          <div className={`text-base lg:text-lg font-black ${
+                        <td className="px-2 lg:px-6 py-5">
+                          <div className={`text-sm lg:text-lg font-black ${
                             idx === 0 ? "text-accent" : 
                             idx === 1 ? "text-slate-300" :
                             idx === 2 ? "text-amber-600" : "text-muted"
@@ -100,28 +100,28 @@ export default function LeaderboardPage() {
                             #{idx + 1}
                           </div>
                         </td>
-                        <td className="px-4 lg:px-6 py-5">
-                          <div className="flex items-center gap-3 lg:gap-4">
-                            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-accent/20 flex items-center justify-center text-lg lg:text-xl shrink-0"
+                        <td className="px-2 lg:px-6 py-5">
+                          <div className="flex items-center gap-2 lg:gap-4 overflow-hidden">
+                            <div className="w-7 h-7 lg:w-10 lg:h-10 rounded-lg bg-accent/20 flex items-center justify-center text-sm lg:text-xl shrink-0"
                               style={{ background: isCurrentUser ? 'rgba(251,191,36,0.3)' : '' }}>
                               {idx === 0 ? "👑" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "🛡️"}
                             </div>
-                            <div className="min-w-0">
-                              <div className="font-black italic uppercase text-[10px] lg:text-xs flex items-center gap-2 truncate">
-                                {entry.team_name}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-black italic uppercase text-[9px] lg:text-xs flex items-center gap-1.5 leading-none mb-1">
+                                <span className="truncate">{entry.team_name}</span>
                                 {isCurrentUser && (
-                                  <span className="text-[8px] bg-accent px-1.5 py-0.5 rounded text-black uppercase font-black shrink-0">TE</span>
+                                  <span className="text-[7px] bg-accent px-1 py-0.5 rounded text-black uppercase font-black shrink-0">TE</span>
                                 )}
                               </div>
-                              <div className="text-[9px] lg:text-[10px] text-muted font-bold truncate">@{entry.username.split('@')[0]}</div>
+                              <div className="text-[8px] lg:text-[10px] text-muted font-bold truncate opacity-60">@{entry.username.split('@')[0]}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 lg:px-6 py-5 text-right font-mono font-black text-white text-xs lg:text-sm">
+                        <td className="px-2 lg:px-6 py-5 text-right font-mono font-black text-white text-[10px] lg:text-sm">
                           {entry.xp.toLocaleString()}
                         </td>
-                        <td className="px-4 lg:px-6 py-5 text-right">
-                          <div className="inline-flex items-center justify-center w-7 h-7 lg:w-8 lg:h-8 rounded-lg border border-accent/20 bg-accent/5 text-accent text-[10px] lg:text-xs font-black italic">
+                        <td className="px-2 lg:px-6 py-5 text-right">
+                          <div className="inline-flex items-center justify-center w-6 h-6 lg:w-8 lg:h-8 rounded-lg border border-accent/20 bg-accent/5 text-accent text-[9px] lg:text-xs font-black italic">
                             {level}
                           </div>
                         </td>

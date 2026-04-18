@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useGameStore } from "@/lib/store/game-store";
 import { STARTER_PLAYERS } from "@/content/players";
 import { PLAYSTYLES } from "@/content/playstyles";
-import { ProfileSetup } from "@/components/profile/profile-setup";
 import { useState } from "react";
 
 const FEATURES = [
   {
     icon: "⚽",
-    title: "Kings Simulation",
+    title: "Super Simulation",
     desc: "Il motore di gioco più dinamico: ogni tua scelta tattica—stance, command e playstyle—cambia l'esito del match in tempo reale.",
   },
   {
@@ -47,7 +46,7 @@ export default function DashboardPage() {
   const currency = useGameStore((s) => s.currency);
   const teamName = useGameStore((s) => s.teamName);
   const badgeId = useGameStore((s) => s.badgeId);
-  const [showProfile, setShowProfile] = useState(false);
+  const setProfileModalOpen = useGameStore((s) => s.setProfileModalOpen);
 
   const squadPlayers = lineup
     .sort((a, b) => a.position - b.position)
@@ -61,7 +60,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <ProfileSetup isOpen={showProfile} onClose={() => setShowProfile(false)} />
+      {/* ProfileSetup removed (now in layout) */}
 
       {/* Hero banner */}
       <div className="relative px-4 lg:px-8 pt-10 lg:pt-16 pb-10 lg:pb-14 text-center overflow-hidden">
@@ -77,7 +76,7 @@ export default function DashboardPage() {
             Season 1: The Throne
           </div>
           <h1 className="text-4xl lg:text-7xl font-black italic tracking-tighter mb-4 uppercase leading-none">
-            KINGS<span className="text-white">LEAGUE</span>
+            SUPER<span className="text-white">CALCIO</span>
           </h1>
           <div className="flex items-center justify-center gap-3 lg:gap-4 mt-4 lg:mt-6">
             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-accent/20 flex items-center justify-center text-xl lg:text-3xl border border-accent/40 shadow-[0_0_30px_rgba(251,191,36,0.2)]">
@@ -85,7 +84,7 @@ export default function DashboardPage() {
             </div>
             <div className="text-2xl lg:text-3xl font-black italic tracking-tight text-white uppercase">{teamName}</div>
             <button 
-              onClick={() => setShowProfile(true)}
+              onClick={() => setProfileModalOpen(true)}
               className="text-[8px] lg:text-[10px] uppercase font-black tracking-widest text-muted hover:text-accent transition-colors ml-1 lg:ml-2"
             >
               [Edit]
@@ -165,7 +164,7 @@ export default function DashboardPage() {
           <div className="space-y-4 lg:space-y-6">
             <div className="card p-6 lg:p-8 flex flex-col items-center text-center gap-4 lg:gap-6 border-accent shadow-2xl relative overflow-hidden group"
               style={{background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(239, 68, 68, 0.05))'}}>
-              <div className="absolute top-0 right-0 p-4 font-black italic text-3xl lg:text-4xl opacity-5">KINGS</div>
+              <div className="absolute top-0 right-0 p-4 font-black italic text-3xl lg:text-4xl opacity-5">ARENA</div>
               <div className="text-4xl lg:text-6xl group-hover:scale-110 transition-transform">🏆</div>
               <div className="space-y-1 lg:space-y-2">
                 <div className="font-black uppercase italic text-xl lg:text-2xl tracking-tighter">{isSquadReady ? "SCENDI IN CAMPO" : "SQUADRA INCOMPLETA"}</div>
@@ -183,7 +182,7 @@ export default function DashboardPage() {
 
             <div className="card p-6 flex items-center justify-between border-white/10">
               <div>
-                <div className="text-[10px] text-muted font-black uppercase tracking-widest mb-1">Kings Credits</div>
+                <div className="text-[10px] text-muted font-black uppercase tracking-widest mb-1">Credits</div>
                 <div className="text-2xl lg:text-3xl font-black italic text-accent">{currency.toLocaleString()} <span className="text-[10px] lg:text-xs font-normal">CR</span></div>
               </div>
               <div className="text-3xl lg:text-4xl">💰</div>

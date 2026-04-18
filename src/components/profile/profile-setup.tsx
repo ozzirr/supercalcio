@@ -50,7 +50,7 @@ export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean
         )}
         <div className="text-center">
           <div className="text-5xl mb-6">🏅</div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter italic italic">KINGS<span className="text-accent">LEAGUE</span></h2>
+          <h2 className="text-3xl font-black uppercase tracking-tighter italic italic">SUPER<span className="text-accent">CALCIO</span></h2>
           <p className="text-muted text-[10px] uppercase tracking-[0.2em] font-black mt-2">Personalizza il tuo team</p>
         </div>
 

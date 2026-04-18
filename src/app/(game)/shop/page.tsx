@@ -11,6 +11,7 @@ type ShopItem = {
   emoji: string;
   category: "stadium" | "badge" | "upgrade" | "kit";
   comingSoon?: boolean;
+  packType?: "starter" | "premium";
 };
 
 const SHOP_ITEMS: ShopItem[] = [
@@ -117,10 +118,30 @@ const SHOP_ITEMS: ShopItem[] = [
     category: "kit",
     comingSoon: true,
   },
+  // Card Packs
+  {
+    id: "pack_starter",
+    name: "Mini Pack",
+    description: "Sblocca 1 giocatore casuale (Tier Bronze/Silver). Ottimo per iniziare.",
+    cost: 500,
+    emoji: "📦",
+    category: "pack",
+    packType: "starter",
+  },
+  {
+    id: "pack_premium",
+    name: "Premium Pack",
+    description: "Sblocca 1 giocatore casuale (Garantito Gold/Legendary). Solo per l'elite.",
+    cost: 1500,
+    emoji: "💎",
+    category: "pack",
+    packType: "premium",
+  },
 ];
 
 const CATEGORIES = [
   { id: "all", label: "Tutti", emoji: "🛒" },
+  { id: "pack", label: "Pacchetti", emoji: "📦" },
   { id: "stadium", label: "Stadio", emoji: "🏟️" },
   { id: "badge", label: "Badge", emoji: "🛡️" },
   { id: "upgrade", label: "Upgrade", emoji: "⬆️" },
@@ -132,15 +153,42 @@ export default function ShopPage() {
   const purchasedItems = useGameStore(s => s.purchasedItems);
   const buyItem = useGameStore(s => s.buyItem);
 
+  const buyPack = useGameStore(s => s.buyPack);
+
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [notification, setNotification] = useState<{ text: string; ok: boolean } | null>(null);
+  const [revealedPlayer, setRevealedPlayer] = useState<any | null>(null);
+  const [isOpening, setIsOpening] = useState(false);
 
   const filtered = SHOP_ITEMS.filter(item =>
     activeCategory === "all" || item.category === activeCategory
   );
 
-  const handleBuy = (item: ShopItem) => {
+  const handleBuy = async (item: ShopItem) => {
     if (item.comingSoon) return;
+
+    if (item.category === "pack" && item.packType) {
+      if (currency < item.cost) {
+        setNotification({ text: `❌ Credits insufficienti!`, ok: false });
+        setTimeout(() => setNotification(null), 2500);
+        return;
+      }
+
+      setIsOpening(true);
+      // Simulate pack opening delay
+      setTimeout(async () => {
+        const result = await buyPack(item.packType!);
+        setIsOpening(false);
+        if (result && result.length > 0) {
+          setRevealedPlayer(result[0]);
+        } else {
+          setNotification({ text: `❌ Qualcosa è andato storto o hai già tutti i giocatori!`, ok: false });
+          setTimeout(() => setNotification(null), 2500);
+        }
+      }, 1500);
+      return;
+    }
+
     const ok = buyItem(item.id, item.cost);
     if (ok) {
       setNotification({ text: `✅ Acquistato: ${item.name}!`, ok: true });
@@ -271,6 +319,47 @@ export default function ShopPage() {
           })}
         </div>
       </div>
+
+      {/* Pack Opening Animation Overlay */}
+      {isOpening && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-500">
+          <div className="relative">
+            <div className="w-48 h-64 lg:w-64 lg:h-80 bg-accent/20 border-2 border-accent border-dashed rounded-2xl flex items-center justify-center animate-bounce">
+              <span className="text-6xl lg:text-8xl">📦</span>
+            </div>
+            <div className="absolute inset-0 bg-accent blur-[100px] opacity-20 animate-pulse"></div>
+          </div>
+          <h2 className="text-2xl lg:text-4xl font-black uppercase italic text-accent mt-12 animate-pulse">Apertura Pacchetto...</h2>
+        </div>
+      )}
+
+      {/* Revealed Player Modal */}
+      {revealedPlayer && (
+        <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-sm w-full animate-in zoom-in duration-300">
+            <div className="text-center mb-6">
+              <h3 className="text-accent text-[10px] font-black uppercase tracking-[0.3em] mb-2">Nuovo Campione Sbloccato!</h3>
+              <div className="text-3xl font-black uppercase italic leading-none">{revealedPlayer.name}</div>
+            </div>
+            
+            <div className="card p-0 overflow-hidden border-2 border-accent shadow-[0_0_50px_rgba(251,191,36,0.2)]">
+               <img src={`/portraits/${revealedPlayer.portrait}.png`} alt={revealedPlayer.name} className="w-full aspect-[4/5] object-cover" />
+               <div className="p-6 bg-surface space-y-4">
+                  <div className="flex items-center justify-between">
+                     <span className="text-[10px] font-black uppercase text-muted tracking-widest">{revealedPlayer.roleTags[0]}</span>
+                     <span className="text-[10px] font-black uppercase text-accent border border-accent/30 px-2 py-0.5 rounded">{revealedPlayer.tier}</span>
+                  </div>
+                  <button 
+                    onClick={() => setRevealedPlayer(null)}
+                    className="w-full py-4 bg-accent text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:bg-accent-hover active:scale-95 transition-all shadow-lg"
+                  >
+                    Fantastico!
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

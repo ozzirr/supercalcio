@@ -27,7 +27,13 @@ type GameState = {
   teamName: string;
   username: string;
   badgeId: string;
+  availablePlayers: PlayerDefinition[];
   ownedPlayers: any[]; // User's roster with levels and bonuses
+  isProfileModalOpen: boolean;
+  setProfileModalOpen: (open: boolean) => void;
+  claimStarterPack: () => Promise<any[]>;
+  resetRoster: () => Promise<void>;
+  buyPack: (packType: "starter" | "premium") => Promise<any[]>;
 
   // Actions
   setLineup: (lineup: LineupSlot[]) => void;
@@ -54,7 +60,7 @@ type GameState = {
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
-  availablePlayers: STARTER_PLAYERS,
+  availablePlayers: [],
   lineup: [],
   playstyle: "possession_control",
 
@@ -71,6 +77,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   username: "Manager",
   badgeId: "badge_lightning",
   ownedPlayers: [],
+  isProfileModalOpen: false,
+  setProfileModalOpen: (open) => set({ isProfileModalOpen: open }),
 
   setLineup: (lineup) => set({ lineup }),
 
@@ -169,7 +177,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     // Refresh owned players
     const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
-    if (data) set({ ownedPlayers: data });
+    if (data) {
+      set({ ownedPlayers: data });
+      const ownedDefs = STARTER_PLAYERS.filter(p => data.some((up: any) => up.player_id === p.id));
+      set({ availablePlayers: ownedDefs });
+    }
 
     return true;
   },
@@ -194,7 +206,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     // Refresh owned players
     const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
-    if (data) set({ ownedPlayers: data });
+    if (data) {
+      set({ ownedPlayers: data });
+      const ownedDefs = STARTER_PLAYERS.filter(p => data.some((up: any) => up.player_id === p.id));
+      set({ availablePlayers: ownedDefs });
+    }
 
     return true;
   },
@@ -221,7 +237,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // Refresh owned players
     const { data } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
-    if (data) set({ ownedPlayers: data });
+    if (data) {
+      set({ ownedPlayers: data });
+      const ownedDefs = STARTER_PLAYERS.filter(p => data.some((up: any) => up.player_id === p.id));
+      set({ availablePlayers: ownedDefs });
+    }
 
     return true;
   },
@@ -269,14 +289,32 @@ export const useGameStore = create<GameState>((set, get) => ({
                 currency: newUserProfile.currency,
                 xp: newUserProfile.xp
               });
+            } else {
+              console.error("Failed to create profile:", insertError);
             }
           }
         });
         supabase.from('squads').select('*').eq('user_id', data.session.user.id).single().then(({ data: squad }: { data: any }) => {
           if (squad && squad.lineup) set({ lineup: squad.lineup, playstyle: squad.playstyle as Playstyle });
         });
-        supabase.from('user_players').select('*').eq('user_id', data.session.user.id).then(({ data: players }: { data: any }) => {
-          if (players) set({ ownedPlayers: players });
+        // 3. User Players (Collectibles)
+        supabase.from('user_players').select('*').eq('user_id', data.session.user.id).then(async ({ data: players, error }: { data: any, error: any }) => {
+          if (error) {
+            console.error("DEBUG: Error fetching players:", JSON.stringify(error, null, 2));
+            // If it's a 404 or table missing, we still want to try to allow them to claim
+            set({ ownedPlayers: [], availablePlayers: [] });
+            return;
+          }
+
+          if (players && players.length > 0) {
+            set({ ownedPlayers: players });
+            const ownedDefs = STARTER_PLAYERS.filter(p => players.some((up: any) => up.player_id === p.id));
+            set({ availablePlayers: ownedDefs });
+          } else {
+            // Roster empty - Let UI handle showing the button
+            set({ ownedPlayers: [], availablePlayers: [] });
+            console.log("DEBUG: Roster empty. Waiting for user to claim.");
+          }
         });
       }
     });
@@ -284,6 +322,130 @@ export const useGameStore = create<GameState>((set, get) => ({
     supabase.auth.onAuthStateChange((_event: any, session: any) => {
       set({ user: session?.user || null });
     });
+  },
+
+  claimStarterPack: async () => {
+    const state = get();
+    // Prevent double claim if roster already has players
+    if (state.ownedPlayers.length > 0) {
+      console.warn("DEBUG: Starter Pack already claimed.");
+      return [];
+    }
+    
+    console.log("DEBUG: Attempting to claim Starter Pack for user:", state.user?.id);
+    
+    if (!state.user || !supabase) {
+      console.warn("DEBUG: Claim aborted. User or Supabase missing.");
+      return [];
+    }
+
+    try {
+      const allGKs = STARTER_PLAYERS.filter(p => p.roleTags.includes('goalkeeper'));
+      const others = STARTER_PLAYERS.filter(p => !p.roleTags.includes('goalkeeper'));
+
+      if (allGKs.length === 0 || others.length < 6) {
+        throw new Error("Roster data incomplete. Cannot generate pack.");
+      }
+
+      // 1 GK + 6 Others = 7 total
+      const randomGK = allGKs[Math.floor(Math.random() * allGKs.length)];
+      const shuffledOthers = [...others].sort(() => 0.5 - Math.random());
+      const pack = [randomGK, ...shuffledOthers.slice(0, 6)];
+
+      console.log("DEBUG: Generating pack with IDs:", pack.map(p => p.id));
+
+      const inserts = pack.map(p => ({
+        user_id: state.user.id,
+        player_id: p.id,
+        level: 1
+      }));
+
+      const { error } = await supabase.from('user_players').upsert(inserts, { onConflict: 'user_id,player_id' });
+      
+      if (error) {
+        console.error("DEBUG: Upsert error:", error);
+        throw error;
+      }
+
+      console.log("DEBUG: Upsert success. Fetching new roster...");
+
+      const { data: newPlayers, error: fetchError } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+      
+      if (fetchError) throw fetchError;
+
+      if (newPlayers) {
+        set({ ownedPlayers: newPlayers });
+        const ownedDefs = STARTER_PLAYERS.filter(p => newPlayers.some((up: any) => up.player_id === p.id));
+        set({ availablePlayers: ownedDefs });
+        console.log("DEBUG: Roster updated successfully. Players owned:", ownedDefs.length);
+        return pack;
+      }
+      return [];
+    } catch (err: any) {
+      console.error("CRITICAL: Failed to claim starter pack:", err.message);
+      alert("Errore nel riscatto: " + (err.message || "Problema di connessione"));
+      return [];
+    }
+  },
+
+  resetRoster: async () => {
+    const state = get();
+    if (!state.user || !supabase) return;
+    
+    console.log("DEBUG: Resetting roster for user:", state.user.id);
+    
+    // Clear DB
+    await supabase.from('user_players').delete().eq('user_id', state.user.id);
+    await supabase.from('squads').delete().eq('user_id', state.user.id);
+    
+    // Reset State
+    set({ 
+      ownedPlayers: [], 
+      availablePlayers: [], 
+      lineup: [] 
+    });
+  },
+
+  buyPack: async (packType) => {
+    const state = get();
+    const cost = packType === 'starter' ? 500 : 1500;
+    if (state.currency < cost || !state.user) return [];
+
+    // Filter out players already owned
+    const ownedIds = state.ownedPlayers.map(p => p.player_id);
+    const pool = STARTER_PLAYERS.filter(p => !ownedIds.includes(p.id));
+
+    if (pool.length === 0) return [];
+
+    // For premium pack, maybe pick higher tier?
+    let selectionPool = pool;
+    if (packType === 'premium') {
+      const elite = pool.filter(p => p.tier === 'gold' || p.tier === 'legendary');
+      if (elite.length > 0) selectionPool = elite;
+    }
+
+    const picked = selectionPool[Math.floor(Math.random() * selectionPool.length)];
+    
+    const { error } = await supabase.from('user_players').insert({
+      user_id: state.user.id,
+      player_id: picked.id
+    });
+
+    if (error) return [];
+
+    const newCurrency = state.currency - cost;
+    set({ currency: newCurrency });
+    await supabase.from('profiles').update({ currency: newCurrency }).eq('id', state.user.id);
+
+    // Refresh
+    const { data: newPlayers } = await supabase.from('user_players').select('*').eq('user_id', state.user.id);
+    if (newPlayers) {
+      set({ ownedPlayers: newPlayers });
+      const ownedDefs = STARTER_PLAYERS.filter(p => newPlayers.some((up: any) => up.player_id === p.id));
+      set({ availablePlayers: ownedDefs });
+    }
+
+    return [picked];
   },
 
   saveSquad: async () => {

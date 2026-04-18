@@ -1,5 +1,5 @@
 -- Supabase Schema for Supercalcio Multiplayer
-DROP TABLE IF EXISTS public.matches, public.squads, public.profiles CASCADE;
+DROP TABLE IF EXISTS public.market_players, public.user_players, public.matches, public.squads, public.profiles CASCADE;
 
 -- 1. Profiles (extends auth.users)
 CREATE TABLE public.profiles (
@@ -25,6 +25,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Cleanup existing trigger before creating
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

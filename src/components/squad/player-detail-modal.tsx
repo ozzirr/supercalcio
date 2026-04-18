@@ -41,7 +41,7 @@ export function PlayerDetailModal({
   isAssigned,
 }: PlayerDetailModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
         className={`w-full max-w-lg rounded-xl bg-surface border ${TIER_BORDER[player.tier] ?? "border-border"} ${TIER_GLOW[player.tier] ?? ""} p-6 space-y-5`}
         onClick={(e) => e.stopPropagation()}

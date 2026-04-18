@@ -3,6 +3,8 @@
 export const dynamic = "force-dynamic";
 
 import { NavBar } from "@/components/layout/nav-bar";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
+import { ProfileSetup } from "@/components/profile/profile-setup";
 import { useGameStore } from "@/lib/store/game-store";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +15,8 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
   const user = useGameStore(s => s.user);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const isProfileModalOpen = useGameStore(s => s.isProfileModalOpen);
+  const setProfileModalOpen = useGameStore(s => s.setProfileModalOpen);
 
   useEffect(() => {
     async function checkAuth() {
@@ -48,8 +52,10 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      <NavBar />
-      <main className="flex-1 flex flex-col">{children}</main>
+      <ProfileSetup isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} />
+      <NavBar onOpenProfile={() => setProfileModalOpen(true)} />
+      <main className="flex-1 flex flex-col pb-16 lg:pb-0">{children}</main>
+      <MobileTabBar />
     </>
   );
 }
