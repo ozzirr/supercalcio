@@ -17,8 +17,8 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
   if (!playerBase) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12">
-        <div className="text-2xl font-bold mb-4 text-muted">Player not found in database</div>
-        <button onClick={() => router.push("/mercato")} className="btn-primary">Back to Mercato</button>
+        <div className="text-2xl font-bold mb-4 text-muted">Giocatore non trovato nel database</div>
+        <button onClick={() => router.push("/mercato")} className="btn-primary">Torna al Mercato</button>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
   return (
     <div className="flex-1 overflow-y-auto p-8">
       <button onClick={() => router.back()} className="text-muted hover:text-accent mb-8 flex items-center gap-2 transition-colors">
-        ← Back to Squad
+        ← Indietro
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
@@ -77,7 +77,7 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
         <div className="space-y-8 py-4">
           <div>
             <h2 className="text-3xl font-black uppercase tracking-tight mb-2 italic">
-              {isOwned ? "Player Performance" : "Scouting Report"}
+              {isOwned ? "Prestazioni" : "Rapporto Scout"}
             </h2>
             <p className="text-muted">
               {isOwned ? "Potenzia il tuo campione utilizzando i Credits." : "Esamina i parametri del campione prima di acquistarlo sul Mercato."}
@@ -128,7 +128,7 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
           <div className="card p-6 border-accent/20 bg-accent/5">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs uppercase tracking-widest text-muted font-bold mb-1">Current Balance</div>
+                <div className="text-xs uppercase tracking-widest text-muted font-bold mb-1">Saldo Attuale</div>
                 <div className="text-2xl font-black text-accent italic">{currency.toLocaleString()} CR</div>
               </div>
               <div className="text-4xl">💰</div>

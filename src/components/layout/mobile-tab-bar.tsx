@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TAB_ITEMS = [
-  { href: "/leaderboard", label: "Ranking", emoji: "📊" },
-  { href: "/squad", label: "Squadra", emoji: "🛡️" },
   { href: "/dashboard", label: "Home", emoji: "🏟️" },
+  { href: "/squad", label: "Squadra", emoji: "🛡️" },
+  { href: "/match", label: "Gioca", emoji: "⚡" },
   { href: "/mercato", label: "Mercato", emoji: "⚽" },
-  { href: "/shop", label: "Shop", emoji: "💰" },
+  { href: "/leaderboard", label: "Ranking", emoji: "📊" },
 ];
 
 export function MobileTabBar() {

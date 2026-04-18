@@ -176,7 +176,7 @@ export default function SquadPage() {
               <div className="text-4xl animate-bounce">📦</div>
               <div>
                 <div className="text-[10px] font-black uppercase text-accent tracking-widest mb-1">Roster Vuoto</div>
-                <div className="text-[9px] text-muted leading-tight uppercase font-bold">Sembra che i tuoi utenti storici non abbiano ancora ricevuto il pacchetto iniziale.</div>
+                <div className="text-[9px] text-muted leading-tight uppercase font-bold">Non hai ancora ricevuto il tuo Starter Pack.</div>
               </div>
               <button 
                 onClick={handleOpenPack}
@@ -195,11 +195,11 @@ export default function SquadPage() {
           <h1 className="text-2xl lg:text-3xl font-black uppercase italic tracking-tighter">Squad <span className="text-accent">Builder</span></h1>
           <div className="flex items-center gap-2 lg:gap-3">
             <button onClick={autoFillLineup} className="btn-secondary text-[10px] py-2 px-4 rounded-xl font-black uppercase tracking-widest">
-              Auto-Fill
+              Auto-Completa
             </button>
             {lineup.length > 0 && (
               <button onClick={clearLineup} className="btn-secondary text-[10px] py-2 px-4 rounded-xl font-black uppercase tracking-widest text-danger border-danger/30">
-                Clear
+                Svuota
               </button>
             )}
             <button
@@ -212,7 +212,7 @@ export default function SquadPage() {
               disabled={!validation.valid}
               className={`btn-primary text-[10px] py-2 px-4 rounded-xl font-black uppercase tracking-widest ${!validation.valid ? "opacity-30 pointer-events-none" : "shadow-lg shadow-accent/20"}`}
             >
-              Start Match
+              Inizia Partita
             </button>
           </div>
         </div>
@@ -302,7 +302,7 @@ export default function SquadPage() {
 
           {/* Playstyle selection */}
           <div className="space-y-4">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted">Team Playstyle</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted">Stile di Gioco</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
               {PLAYSTYLES.map((ps) => (
                 <PlaystyleCard
@@ -364,7 +364,7 @@ export default function SquadPage() {
                 }
               : undefined
           }
-          assignLabel={activeSlot !== null ? `Assign to ${POSITION_LABELS[activeSlot]}` : "Add to Squad"}
+          assignLabel={activeSlot !== null ? `Assegna a ${POSITION_LABELS[activeSlot]}` : "Aggiungi al Team"}
           isAssigned={assignedIds.has(modalPlayer.id)}
         />
       )}

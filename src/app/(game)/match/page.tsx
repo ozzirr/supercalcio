@@ -214,10 +214,10 @@ export default function MatchPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="card p-8 text-center space-y-4 max-w-md">
-          <h2 className="text-xl font-bold">Squad Not Ready</h2>
-          <p className="text-muted">You need a valid squad of 5 players before starting a match.</p>
+          <h2 className="text-xl font-bold">Squadra Non Pronta</h2>
+          <p className="text-muted">Hai bisogno di una formazione valida di 5 giocatori prima di iniziare una partita.</p>
           <Link href="/squad" className="btn-primary inline-block">
-            Go to Squad Builder
+            Vai alla Formazione
           </Link>
         </div>
       </div>
@@ -297,7 +297,7 @@ export default function MatchPage() {
                  </div>
               </div>
               {isSearching && (
-                <div className="text-[8px] text-accent animate-pulse font-black uppercase tracking-widest">Matchmaking...</div>
+                <div className="text-[8px] text-accent animate-pulse font-black uppercase tracking-widest">Analisi avversario...</div>
               )}
               {!isSearching && !isFinished && (
                 <div className="flex items-center gap-1.5">
@@ -306,7 +306,7 @@ export default function MatchPage() {
                 </div>
               )}
               {isFinished && (
-                <div className="text-[8px] text-muted uppercase tracking-widest font-black">Full Time</div>
+                <div className="text-[8px] text-muted uppercase tracking-widest font-black">Fischio Finale</div>
               )}
             </div>
 
