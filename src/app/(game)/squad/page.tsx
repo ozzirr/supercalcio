@@ -49,6 +49,13 @@ export default function SquadPage() {
     }
   }, [searchParams, availablePlayers.length]);
 
+  // Auto-select first player if none selected
+  useEffect(() => {
+    if (!selectedPlayer && availablePlayers.length > 0) {
+      setSelectedPlayer(availablePlayers[0]);
+    }
+  }, [availablePlayers, selectedPlayer]);
+
   const validation = validateSquad(lineup, availablePlayers);
   const assignedIds = new Set(lineup.map((s) => s.playerId));
 
@@ -319,38 +326,70 @@ export default function SquadPage() {
         </div>
       </div>
 
-      {/* Right panel: Player details (Hidden on smallest mobile unless selected) */}
-      {selectedPlayer && (
-        <div className="order-3 w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-surface shrink-0 p-6 lg:p-4 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">Dettaglio Calciatore</h2>
-            <button onClick={() => setSelectedPlayer(null)} className="lg:hidden text-muted">✕</button>
-          </div>
-          <div className="space-y-6">
+      {/* Right panel: Player details */}
+      <div className={`order-3 w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-border bg-surface shrink-0 p-6 lg:p-4 overflow-y-auto transition-all ${!selectedPlayer && "hidden lg:block opacity-50"}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">Dettaglio Calciatore</h2>
+          {selectedPlayer && <button onClick={() => setSelectedPlayer(null)} className="lg:hidden text-muted">✕</button>}
+        </div>
+        
+        {selectedPlayer ? (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <PlayerCard player={selectedPlayer} />
-            <div className="flex flex-col gap-3">
-              {!assignedIds.has(selectedPlayer.id) ? (
+            
+            {/* Ability / Skills Section */}
+            <div className="space-y-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-accent border-b border-accent/20 pb-2">Skills & Tattiche</div>
+              
+              <div className="italic text-[11px] text-muted leading-relaxed">
+                "{selectedPlayer.flavorText}"
+              </div>
+
+              {/* Passive */}
+              <div className="p-3 rounded-xl bg-surface-lighter border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-black uppercase text-white tracking-widest">{selectedPlayer.passive.name}</div>
+                  <div className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Passiva</div>
+                </div>
+                <div className="text-[10px] text-muted leading-snug">{selectedPlayer.passive.description}</div>
+              </div>
+
+              {/* Active */}
+              <div className="p-3 rounded-xl bg-surface-lighter border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-black uppercase text-white tracking-widest">{selectedPlayer.activeSkill.name}</div>
+                  <div className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Attiva</div>
+                </div>
+                <div className="text-[10px] text-muted leading-snug">{selectedPlayer.activeSkill.description}</div>
+              </div>
+
+              {/* Ultimate */}
+              <div className="p-3 rounded-xl bg-surface-lighter border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-black uppercase text-white tracking-widest">{selectedPlayer.ultimate.name}</div>
+                  <div className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">Ultimate</div>
+                </div>
+                <div className="text-[10px] text-muted leading-snug">{selectedPlayer.ultimate.description}</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-2">
+              {!assignedIds.has(selectedPlayer.id) && (
                 <button
                   onClick={() => handleAssign(selectedPlayer)}
                   className="btn-primary w-full py-4 text-xs font-black uppercase tracking-widest rounded-xl shadow-xl shadow-accent/20"
                 >
                   {activeSlot !== null ? `Assegna a ${POSITION_LABELS[activeSlot]}` : "Aggiungi al Team"}
                 </button>
-              ) : (
-                <div className="w-full text-center p-4 rounded-xl bg-accent/10 border border-accent/20">
-                   <div className="text-[10px] text-accent font-black uppercase tracking-widest">Giocatore in Rosa</div>
-                </div>
               )}
-              <button
-                onClick={() => setModalPlayer(selectedPlayer)}
-                className="btn-secondary w-full py-4 text-xs font-black uppercase tracking-widest rounded-xl"
-              >
-                Visuale Premium
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="h-48 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-muted/30">
+            Nessun Giocatore Selezionato
+          </div>
+        )}
+      </div>
       {/* Detail modal */}
       {modalPlayer && (
         <PlayerDetailModal

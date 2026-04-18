@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { SHOP_ITEMS, type ShopItem } from "@/content/shop";
+import { PackOpeningModal } from "@/components/game/PackOpeningModal";
 
 const CATEGORIES = [
   { id: "all", label: "Tutti", emoji: "🛒" },
@@ -14,23 +16,37 @@ const CATEGORIES = [
 ] as const;
 
 export default function ShopPage() {
+  const router = useRouter();
   const currency = useGameStore(s => s.currency);
   const purchasedItems = useGameStore(s => s.purchasedItems);
   const equippedStadium = useGameStore(s => s.equippedStadium);
+  const equippedKit = useGameStore(s => s.equippedKit);
+  const badgeId = useGameStore(s => s.badgeId);
   const buyItem = useGameStore(s => s.buyItem);
+  const equipItem = useGameStore(s => s.equipItem);
   const buyPack = useGameStore(s => s.buyPack);
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [notification, setNotification] = useState<{ text: string; ok: boolean } | null>(null);
   const [revealedPlayer, setRevealedPlayer] = useState<any | null>(null);
-  const [isOpening, setIsOpening] = useState(false);
+  const [openingPackType, setOpeningPackType] = useState<"starter" | "premium" | null>(null);
 
   const filtered = SHOP_ITEMS.filter(item =>
     activeCategory === "all" || item.category === activeCategory
   );
 
-  const handleBuy = async (item: ShopItem) => {
+  const handleAction = async (item: ShopItem) => {
     if (item.comingSoon) return;
+
+    const owned = purchasedItems.includes(item.id);
+
+    if (owned) {
+      if (item.category === "pack" || item.category === "upgrade") return;
+      await equipItem(item.id);
+      setNotification({ text: `✨ Equipaggiato: ${item.name}!`, ok: true });
+      setTimeout(() => setNotification(null), 2500);
+      return;
+    }
 
     if (item.category === "pack" && item.packType) {
       if (currency < item.cost) {
@@ -39,15 +55,14 @@ export default function ShopPage() {
         return;
       }
 
-      setIsOpening(true);
-      // Simulate pack opening delay
+      setOpeningPackType(item.packType!);
       setTimeout(async () => {
         const result = await buyPack(item.packType!);
-        setIsOpening(false);
         if (result && result.length > 0) {
           setRevealedPlayer(result[0]);
         } else {
-          setNotification({ text: `❌ Qualcosa è andato storto o hai già tutti i giocatori!`, ok: false });
+          setOpeningPackType(null);
+          setNotification({ text: `❌ Errore durante l'apertura!`, ok: false });
           setTimeout(() => setNotification(null), 2500);
         }
       }, 1500);
@@ -57,10 +72,8 @@ export default function ShopPage() {
     const ok = buyItem(item.id, item.cost);
     if (ok) {
       setNotification({ text: `✅ Acquistato: ${item.name}!`, ok: true });
-    } else if (purchasedItems.includes(item.id)) {
-      setNotification({ text: `Hai già acquistato ${item.name}.`, ok: false });
     } else {
-      setNotification({ text: `❌ Credits insufficienti! Ti servono ${item.cost} Credits.`, ok: false });
+      setNotification({ text: `❌ Credits insufficienti!`, ok: false });
     }
     setTimeout(() => setNotification(null), 2500);
   };
@@ -119,7 +132,10 @@ export default function ShopPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {filtered.map(item => {
             const owned = purchasedItems.includes(item.id);
-            const isEquipped = item.category === "stadium" && equippedStadium === item.id;
+            const isEquipped = 
+              (item.category === "stadium" && equippedStadium === item.id) ||
+              (item.category === "kit" && equippedKit === item.id) ||
+              (item.category === "badge" && badgeId === item.id);
             const canAfford = currency >= item.cost;
 
             return (
@@ -132,7 +148,7 @@ export default function ShopPage() {
                     ? "border-accent/30 bg-accent/5"
                     : "card-hover cursor-pointer border-white/5"
                 }`}
-                onClick={() => !item.comingSoon && !owned && handleBuy(item)}
+                onClick={() => !item.comingSoon && handleAction(item)}
               >
                 {/* Coming soon badge */}
                 {item.comingSoon && (
@@ -168,8 +184,8 @@ export default function ShopPage() {
 
                   {!item.comingSoon && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleBuy(item); }}
-                      disabled={owned || !canAfford}
+                      onClick={(e) => { e.stopPropagation(); handleAction(item); }}
+                      disabled={isEquipped || (!owned && !canAfford) || (owned && (item.category === "upgrade" || item.category === "pack"))}
                       className={`px-4 py-2 lg:py-2.5 rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest transition-all ${
                         owned
                           ? "bg-accent/10 text-accent cursor-default border border-accent/20"
@@ -178,7 +194,7 @@ export default function ShopPage() {
                           : "bg-white/5 text-muted cursor-not-allowed border border-white/5"
                       }`}
                     >
-                      {owned ? (isEquipped ? "Equipaggiato" : "Acquistato") : canAfford ? "Acquista" : "Mancano Credits"}
+                      {owned ? (isEquipped ? "★ Attivo" : "Equipaggia") : canAfford ? "Acquista" : "Mancano Credits"}
                     </button>
                   )}
                 </div>
@@ -188,46 +204,16 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Pack Opening Animation Overlay */}
-      {isOpening && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-500">
-          <div className="relative">
-            <div className="w-48 h-64 lg:w-64 lg:h-80 bg-accent/20 border-2 border-accent border-dashed rounded-2xl flex items-center justify-center animate-bounce">
-              <span className="text-6xl lg:text-8xl">📦</span>
-            </div>
-            <div className="absolute inset-0 bg-accent blur-[100px] opacity-20 animate-pulse"></div>
-          </div>
-          <h2 className="text-2xl lg:text-4xl font-black uppercase italic text-accent mt-12 animate-pulse">Apertura Pacchetto...</h2>
-        </div>
-      )}
-
-      {/* Revealed Player Modal */}
-      {revealedPlayer && (
-        <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="max-w-sm w-full animate-in zoom-in duration-300">
-            <div className="text-center mb-6">
-              <h3 className="text-accent text-[10px] font-black uppercase tracking-[0.3em] mb-2">Nuovo Campione Sbloccato!</h3>
-              <div className="text-3xl font-black uppercase italic leading-none">{revealedPlayer.name}</div>
-            </div>
-            
-            <div className="card p-0 overflow-hidden border-2 border-accent shadow-[0_0_50px_rgba(251,191,36,0.2)]">
-               <img src={`/portraits/${revealedPlayer.portrait}.png`} alt={revealedPlayer.name} className="w-full aspect-[4/5] object-cover" />
-               <div className="p-6 bg-surface space-y-4">
-                  <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-black uppercase text-muted tracking-widest">{revealedPlayer.roleTags[0]}</span>
-                     <span className="text-[10px] font-black uppercase text-accent border border-accent/30 px-2 py-0.5 rounded">{revealedPlayer.tier}</span>
-                  </div>
-                  <button 
-                    onClick={() => setRevealedPlayer(null)}
-                    className="w-full py-4 bg-accent text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:bg-accent-hover active:scale-95 transition-all shadow-lg"
-                  >
-                    Fantastico!
-                  </button>
-               </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Pack Opening Experience */}
+      <PackOpeningModal 
+        packType={openingPackType}
+        revealedPlayer={revealedPlayer}
+        onClose={() => {
+          setOpeningPackType(null);
+          setRevealedPlayer(null);
+          router.push("/squad");
+        }}
+      />
     </div>
   );
 }

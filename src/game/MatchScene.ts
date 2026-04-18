@@ -66,6 +66,7 @@ export class MatchScene extends Phaser.Scene {
   private ballWorldX = 500;
   private ballWorldY = 300;
 
+  private pitchGraphics!: Phaser.GameObjects.Graphics;
   private playerMap: Map<string, PlayerSprite> = new Map();
   private playerDefs: Map<string, PlayerDefinition> = new Map();
 
@@ -322,7 +323,10 @@ export class MatchScene extends Phaser.Scene {
 
     const t = themes[stadium] || themes.stadium_default;
 
-    const g = this.add.graphics();
+    if (this.pitchGraphics) this.pitchGraphics.clear();
+    else this.pitchGraphics = this.add.graphics();
+    
+    const g = this.pitchGraphics;
     g.fillGradientStyle(t.bg[0], t.bg[1], t.bg[2], t.bg[3], 1);
     g.fillRect(0, 0, screenW, screenH);
 

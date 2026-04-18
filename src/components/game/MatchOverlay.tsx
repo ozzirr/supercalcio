@@ -17,15 +17,35 @@ export function MatchOverlay() {
   const matchScore = useGameStore(s => s.matchScore);
   const opponentInfo = useGameStore(s => s.opponentInfo);
   const stopGlobalMatch = useGameStore(s => s.stopGlobalMatch);
+  const clearMatchState = useGameStore(s => s.clearMatchState);
   
   const isMatchPage = pathname === "/match";
+  const isResultsPage = pathname === "/results";
   const [isDismissed, setIsDismissed] = useState(false);
-  const shouldShow = (matchInProgress || matchFinished) && !isDismissed;
+  const shouldShow = (matchInProgress || matchFinished) && !isDismissed && !isResultsPage;
 
   // Reset dismissal when a new match starts
   useEffect(() => {
     if (matchInProgress) setIsDismissed(false);
   }, [matchInProgress]);
+
+  // Handle immediate cleanup on /results
+  useEffect(() => {
+    if (isResultsPage) {
+      clearMatchState();
+    }
+  }, [isResultsPage, clearMatchState]);
+
+  // Auto-clear match state when navigating away AND finished
+  useEffect(() => {
+    if (matchFinished && !isMatchPage && !isResultsPage) {
+      const timer = setTimeout(() => {
+        setIsDismissed(true);
+        clearMatchState();
+      }, 8000); 
+      return () => clearTimeout(timer);
+    }
+  }, [matchFinished, isMatchPage, isResultsPage, clearMatchState]);
 
   // Dragging logic for PiP
   const [pos, setPos] = useState({ x: 20, y: 80 });
@@ -108,7 +128,11 @@ export function MatchOverlay() {
              </div>
              {matchFinished && (
                <button 
-                onClick={(e) => { e.stopPropagation(); setIsDismissed(true); }}
+                 onClick={(e) => { 
+                   e.stopPropagation(); 
+                   setIsDismissed(true); 
+                   clearMatchState();
+                 }}
                 className="w-5 h-5 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-xs transition-colors"
                >
                  ✕

@@ -24,7 +24,7 @@ export default function MatchPage() {
     isMuted, setMuted,
     matchInProgress, matchTick, matchScore, matchEvents,
     startGlobalMatch, finishMatchAndSave, opponentInfo,
-    equippedStadium
+    equippedStadium, purchasedItems
   } = useGameStore();
 
   const validation = validateSquad(lineup, availablePlayers);
@@ -39,7 +39,10 @@ export default function MatchPage() {
 
   // Setup match IF NOT IN PROGRESS
   useEffect(() => {
-    if (!validation.valid || matchInProgress || matchInitializedRef.current) {
+    // GUARD: Don't start if already in progress or IF JUST FINISHED (prevents auto-restart loop)
+    const { matchFinished } = useGameStore.getState();
+    
+    if (!validation.valid || matchInProgress || matchInitializedRef.current || matchFinished) {
       if (matchInProgress) setIsSearching(false);
       return;
     }
@@ -67,20 +70,29 @@ export default function MatchPage() {
         const basePlayer = availablePlayers.find(p => p.id === l.playerId)!;
         const userPlayer = ownedPlayers.find(p => p.player_id === l.playerId);
         
+        // Apply individual bonuses
+        let boosted = { ...basePlayer };
         if (userPlayer && userPlayer.stats_bonus) {
-          return {
-            ...basePlayer,
-            stats: {
-              pace: basePlayer.stats.pace + (userPlayer.stats_bonus.pace || 0),
-              shooting: basePlayer.stats.shooting + (userPlayer.stats_bonus.shooting || 0),
-              passing: basePlayer.stats.passing + (userPlayer.stats_bonus.passing || 0),
-              defense: basePlayer.stats.defense + (userPlayer.stats_bonus.defense || 0),
-              physical: basePlayer.stats.physical + (userPlayer.stats_bonus.physical || 0),
-              goalkeeping: basePlayer.stats.goalkeeping + (userPlayer.stats_bonus.goalkeeping || 0),
-            }
+          boosted.stats = {
+            pace: boosted.stats.pace + (userPlayer.stats_bonus.pace || 0),
+            shooting: boosted.stats.shooting + (userPlayer.stats_bonus.shooting || 0),
+            passing: boosted.stats.passing + (userPlayer.stats_bonus.passing || 0),
+            defense: boosted.stats.defense + (userPlayer.stats_bonus.defense || 0),
+            physical: boosted.stats.physical + (userPlayer.stats_bonus.physical || 0),
+            goalkeeping: boosted.stats.goalkeeping + (userPlayer.stats_bonus.goalkeeping || 0),
           };
         }
-        return basePlayer;
+
+        // Apply GLOBAL SHOP UPGRADES
+        const hasSpeedBoost = purchasedItems.includes("upgrade_pac");
+        const hasSniperBoost = purchasedItems.includes("upgrade_sho");
+        const hasIronWallBoost = purchasedItems.includes("upgrade_def");
+
+        if (hasSpeedBoost) boosted.stats.pace += 5;
+        if (hasSniperBoost && boosted.roleTags.includes("attacker")) boosted.stats.shooting += 5;
+        if (hasIronWallBoost && boosted.roleTags.includes("defender")) boosted.stats.defense += 5;
+
+        return boosted;
       });
 
       let awayRoster: typeof STARTER_PLAYERS;
