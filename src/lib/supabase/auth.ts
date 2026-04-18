@@ -1,15 +1,27 @@
 import { supabase } from "./client";
+import { getURL } from "./utils";
 
 export async function signInWithEmail(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
 export async function signUpWithEmail(email: string, password: string) {
-  return supabase.auth.signUp({ email, password });
+  return supabase.auth.signUp({ 
+    email, 
+    password,
+    options: {
+      emailRedirectTo: `${getURL()}/auth/callback`,
+    }
+  });
 }
 
 export async function signInWithMagicLink(email: string) {
-  return supabase.auth.signInWithOtp({ email });
+  return supabase.auth.signInWithOtp({ 
+    email,
+    options: {
+      emailRedirectTo: `${getURL()}/auth/callback`,
+    }
+  });
 }
 
 export async function signOut() {

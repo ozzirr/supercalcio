@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGameStore } from "@/lib/store/game-store";
 import { PlayerCard } from "@/components/ui/player-card";
 import { PlayerDetailModal } from "@/components/squad/player-detail-modal";
@@ -37,9 +37,32 @@ export default function SquadPage() {
   const [dragSource, setDragSource] = useState<number | null>(null);
   const [isOpening, setIsOpening] = useState(false);
   const [revealedPlayers, setRevealedPlayers] = useState<PlayerDefinition[] | null>(null);
+  const searchParams = useSearchParams();
+
+  // Auto-claim starter pack if redirection came from onboarding
+  useEffect(() => {
+    if (searchParams.get("claim") === "true" && availablePlayers.length === 0 && !isOpening) {
+      handleOpenPack();
+      // Remove query param without refreshing to avoid re-triggering on reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, "", newUrl);
+    }
+  }, [searchParams, availablePlayers.length]);
 
   const validation = validateSquad(lineup, availablePlayers);
   const assignedIds = new Set(lineup.map((s) => s.playerId));
+
+  async function handleOpenPack() {
+    setIsOpening(true);
+    // Simulate opening delay
+    setTimeout(async () => {
+      const players = await claimStarterPack();
+      setIsOpening(false);
+      if (players && players.length > 0) {
+        setRevealedPlayers(players);
+      }
+    }, 2000);
+  }
 
   const squadPlayers = lineup
     .sort((a, b) => a.position - b.position)
@@ -156,17 +179,7 @@ export default function SquadPage() {
                 <div className="text-[9px] text-muted leading-tight uppercase font-bold">Sembra che i tuoi utenti storici non abbiano ancora ricevuto il pacchetto iniziale.</div>
               </div>
               <button 
-                onClick={async () => {
-                  setIsOpening(true);
-                  // Simulate opening delay
-                  setTimeout(async () => {
-                    const players = await claimStarterPack();
-                    setIsOpening(false);
-                    if (players && players.length > 0) {
-                      setRevealedPlayers(players);
-                    }
-                  }, 2000);
-                }}
+                onClick={handleOpenPack}
                 className="w-full py-3 bg-accent text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-accent/20 hover:scale-105 active:scale-95 transition-all"
               >
                 Riscatta Starter Pack

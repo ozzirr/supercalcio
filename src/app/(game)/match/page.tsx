@@ -35,6 +35,8 @@ export default function MatchPage() {
   const [isSearching, setIsSearching] = useState(true);
   const [opponentInfo, setOpponentInfo] = useState<{ name: string; badge: string; playstyle: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"feed" | "tactics">("feed");
+  const [showResultOverlay, setShowResultOverlay] = useState(false);
+  const [ultimateCharge, setUltimateCharge] = useState(0);
 
   const totalTicks = 90;
 
@@ -138,8 +140,16 @@ export default function MatchPage() {
       });
     };
 
+    const onUltimateUpdate = (charge: number) => {
+      setUltimateCharge(charge);
+    };
+
     EventBus.on("current-scene-ready", onSceneReady);
-    return () => { EventBus.off("current-scene-ready", onSceneReady); };
+    EventBus.on("ultimate-update", onUltimateUpdate);
+    return () => { 
+      EventBus.off("current-scene-ready", onSceneReady); 
+      EventBus.off("ultimate-update", onUltimateUpdate);
+    };
   }, []);
 
   // Start game loop only when both engine and phaser are ready
@@ -171,6 +181,28 @@ export default function MatchPage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [phaserReady]);
+
+  // Auto-finish match
+  const finishTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (isFinished && !finishTriggeredRef.current) {
+      finishTriggeredRef.current = true;
+      console.log("DEBUG: Match finished. Showing overlay in 1.5s...");
+      
+      const timer1 = setTimeout(() => {
+        setShowResultOverlay(true);
+        console.log("DEBUG: Overlay visible. Redirecting in 4s...");
+        
+        const timer2 = setTimeout(() => {
+          finishMatch();
+        }, 4000); // 4 seconds of glory
+        
+        return () => clearTimeout(timer2);
+      }, 1500);
+
+      return () => clearTimeout(timer1);
+    }
+  }, [isFinished]);
 
   // Auto-scroll feed
   const feedEndRef = useRef<HTMLDivElement | null>(null);
@@ -364,14 +396,7 @@ export default function MatchPage() {
           <div className={`shrink-0 p-4 lg:p-6 space-y-6 lg:space-y-8 bg-surface border-t border-border shadow-2xl z-20 ${
               activeTab === "feed" ? "hidden lg:block" : "block"
             }`}>
-            {isFinished && (
-              <button 
-                onClick={finishMatch} 
-                className="btn-primary w-full py-4 text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-accent/20 animate-pulse mb-6"
-              >
-                Conclude & Save Results →
-              </button>
-            )}
+
 
             <div className="space-y-4">
               <div>
@@ -414,13 +439,68 @@ export default function MatchPage() {
                 </div>
               </div>
 
-              <button className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] bg-white/5 text-muted/30 cursor-not-allowed border border-dashed border-border" disabled>
-                ⚡ Ultimate — Charging...
+              <button 
+                onClick={() => {
+                  if (ultimateCharge >= 100) {
+                    // Trigger ultimate logic
+                    setUltimateCharge(0);
+                  }
+                }}
+                disabled={isFinished || ultimateCharge < 100}
+                className={`w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] transition-all relative overflow-hidden border ${
+                  ultimateCharge >= 100 
+                    ? "bg-accent text-black border-accent animate-pulse shadow-[0_0_20px_rgba(251,191,36,0.3)] cursor-pointer" 
+                    : "bg-white/5 text-muted/30 border-dashed border-border cursor-not-allowed"
+                }`}
+              >
+                <div 
+                  className="absolute inset-0 bg-accent/10 transition-all duration-500"
+                  style={{ width: `${ultimateCharge}%` }}
+                />
+                <span className="relative z-10">
+                  {ultimateCharge >= 100 ? "⚡ ULTIMATE READY!" : `⚡ Ultimate Charge: ${ultimateCharge}%`}
+                </span>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Result Overlay */}
+      {showResultOverlay && (
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in duration-700">
+          <div className="max-w-md w-full text-center space-y-8 animate-in zoom-in-95 duration-500">
+            <div>
+              <div className="text-muted text-xs font-black uppercase tracking-[0.4em] mb-4">Final Score</div>
+              <div className="flex items-center justify-center gap-8 lg:gap-12">
+                <div className="text-5xl lg:text-7xl font-black italic text-accent">{score.home}</div>
+                <div className="text-2xl lg:text-3xl text-muted font-light px-4 border-x border-white/10">VS</div>
+                <div className="text-5xl lg:text-7xl font-black italic text-rose-500">{score.away}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className={`text-4xl lg:text-6xl font-black uppercase italic leading-none ${
+                score.home > score.away ? "text-accent animate-pulse" : score.home < score.away ? "text-rose-500" : "text-white"
+              }`}>
+                {score.home > score.away ? "Vittoria!" : score.home < score.away ? "Sconfitta" : "Pareggio"}
+              </h2>
+              <p className="text-muted text-xs lg:text-sm font-medium tracking-wide">
+                {score.home > score.away 
+                  ? "Ottima prestazione! Il tuo team ha dominato il campo." 
+                  : score.home < score.away 
+                  ? "Non scoraggiarti. Analizza la tattica e riprova!" 
+                  : "Un match equilibrato fino all'ultimo secondo."}
+              </p>
+            </div>
+
+            <div className="pt-8 flex flex-col items-center gap-4">
+               <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+               <div className="text-[10px] text-muted uppercase tracking-[0.3em] font-black">Salvataggio dati in corso...</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

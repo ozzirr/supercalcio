@@ -10,17 +10,33 @@ type InitData = {
 
 type PlayerSprite = {
   container: Phaser.GameObjects.Container;
+  card: Phaser.GameObjects.Rectangle;
+  worldX: number;
+  worldY: number;
   baseX: number;
   baseY: number;
   isHome: boolean;
+  isMoving: boolean;
 };
 
+const LOGIC_W = 1000;
+const LOGIC_H = 600;
+
 export class MatchScene extends Phaser.Scene {
-  private ball!: Phaser.GameObjects.Arc;
-  private ballGlow!: Phaser.GameObjects.Arc;
+  private ball!: Phaser.GameObjects.Container;
+  private ballSprite!: Phaser.GameObjects.Arc;
+  private ballShadow!: Phaser.GameObjects.Ellipse;
+  private ballWorldX = 500;
+  private ballWorldY = 300;
+  
   private playerMap: Map<string, PlayerSprite> = new Map();
-  private W = 800;
-  private H = 400;
+  private playerDefs: Map<string, PlayerDefinition> = new Map();
+  
+  private screenW = 800;
+  private screenH = 400;
+
+  private possession: "home" | "away" = "home";
+  private ultimateCharge = 0;
 
   private initMatchHandler!: (data: InitData) => void;
   private matchEventHandler!: (event: MatchEvent) => void;
@@ -30,11 +46,45 @@ export class MatchScene extends Phaser.Scene {
     super("MatchScene");
   }
 
+  preload() {
+    const players = [
+      "aegis", "blaze", "phantom", "volt", "titan", "hawk", 
+      "goliath", "viper", "rampart", "oracle", "avalanche", "zenith",
+      "maestro", "chronos", "nova", "mirage", "sniper", "juggernaut", "venom", "apex"
+    ];
+    players.forEach(p => this.load.image(`portrait-${p}`, `/portraits/${p}.png`));
+
+    this.load.audio('whistle', '/audio/match/whistle.mp3');
+    this.load.audio('goal', '/audio/match/goal.mp3');
+    this.load.audio('save', '/audio/match/save.mp3');
+    this.load.audio('ambient', '/audio/match/crowd.mp3');
+    this.load.audio('music', '/audio/match/theme.mp3');
+  }
+
+  private getScreenX(wx: number, wy: number) {
+    const topWScale = 0.7; 
+    const yNorm = wy / LOGIC_H;
+    const currentWScale = topWScale + (1 - topWScale) * yNorm;
+    const currentW = this.screenW * currentWScale;
+    const offset = (this.screenW - currentW) / 2;
+    return offset + (wx / LOGIC_W) * currentW;
+  }
+
+  private getScreenY(wy: number) {
+    return wy * (this.screenH / LOGIC_H);
+  }
+
   create() {
-    this.W = this.scale.width;
-    this.H = this.scale.height;
+    this.screenW = this.scale.width;
+    this.screenH = this.scale.height;
+    
     this.drawPitch();
     this.createBall();
+
+    try {
+      this.sound.play('ambient', { volume: 0.04, loop: true });
+      this.sound.play('music', { volume: 0.07, loop: true });
+    } catch (e) {}
 
     this.initMatchHandler = (data: InitData) => this.onInitMatch(data);
     this.matchEventHandler = (event: MatchEvent) => this.onMatchEvent(event);
@@ -50,363 +100,233 @@ export class MatchScene extends Phaser.Scene {
       EventBus.off("match-finished", this.matchFinishedHandler);
     });
 
+    this.time.addEvent({
+      delay: 16,
+      callback: () => {
+        this.playerMap.forEach(p => {
+          let targetX = p.baseX;
+          if (p.isHome) {
+            targetX += this.possession === "home" ? 300 : -100;
+          } else {
+            targetX += this.possession === "away" ? -300 : 100;
+          }
+          
+          targetX = Math.max(50, Math.min(LOGIC_W - 50, targetX));
+          p.worldX += (targetX - p.worldX) * 0.025;
+
+          const sx = this.getScreenX(p.worldX, p.worldY);
+          const sy = this.getScreenY(p.worldY);
+          p.container.setPosition(sx, sy);
+          
+          const pScale = 0.65 + (p.worldY / LOGIC_H) * 0.65;
+          p.container.setScale(pScale);
+          p.container.setDepth(100 + p.worldY);
+        });
+
+        EventBus.emit("ultimate-update", this.ultimateCharge);
+
+        if (this.ball) {
+          const bsx = this.getScreenX(this.ballWorldX, this.ballWorldY);
+          const bsy = this.getScreenY(this.ballWorldY);
+          this.ball.setPosition(bsx, bsy);
+          const bScale = 0.8 + (this.ballWorldY / LOGIC_H) * 0.4;
+          this.ball.setScale(bScale);
+          this.ballSprite.angle += 5;
+          this.ball.setDepth(800);
+        }
+      },
+      loop: true
+    });
+
     EventBus.emit("current-scene-ready", this);
   }
 
   private drawPitch() {
-    const { W, H } = this;
+    const { screenW, screenH } = this;
     const g = this.add.graphics();
+    g.fillGradientStyle(0x060c1a, 0x060c1a, 0x0a162d, 0x0a162d, 1);
+    g.fillRect(0, 0, screenW, screenH);
 
-    // Background gradient feel
-    g.fillStyle(0x0a1628, 1);
-    g.fillRect(0, 0, W, H);
+    const getX = (wx: number, wy: number) => this.getScreenX(wx, wy);
+    const getY = (wy: number) => this.getScreenY(wy);
 
-    // Grass stripes (subtle)
-    for (let i = 0; i < 8; i++) {
-      g.fillStyle(i % 2 === 0 ? 0x0b1a30 : 0x0a1628, 1);
-      g.fillRect(i * (W / 8), 0, W / 8, H);
+    for (let i = 0; i < 10; i++) {
+        g.fillStyle(i % 2 === 0 ? 0x0e1c3a : 0x0a162d, 0.4);
+        const yS = i * (LOGIC_H / 10), yE = (i + 1) * (LOGIC_H / 10);
+        const points = [
+          new Phaser.Math.Vector2(getX(0, yS), getY(yS)),
+          new Phaser.Math.Vector2(getX(LOGIC_W, yS), getY(yS)),
+          new Phaser.Math.Vector2(getX(LOGIC_W, yE), getY(yE)),
+          new Phaser.Math.Vector2(getX(0, yE), getY(yE))
+        ];
+        g.fillPoints(points, true);
     }
 
-    // Field lines
-    g.lineStyle(1.5, 0x1e4976, 0.8);
+    g.lineStyle(2, 0x3b82f6, 0.3);
+    const borderPoints = [
+      new Phaser.Math.Vector2(getX(20, 20), getY(20)),
+      new Phaser.Math.Vector2(getX(LOGIC_W-20, 20), getY(20)),
+      new Phaser.Math.Vector2(getX(LOGIC_W-20, LOGIC_H-20), getY(LOGIC_H-20)),
+      new Phaser.Math.Vector2(getX(20, LOGIC_H-20), getY(LOGIC_H-20))
+    ];
+    g.strokePoints(borderPoints, true);
 
-    // Border
-    g.strokeRect(20, 20, W - 40, H - 40);
-
-    // Center line
+    g.lineBetween(getX(LOGIC_W/2, 20), getY(20), getX(LOGIC_W/2, LOGIC_H-20), getY(LOGIC_H-20));
+    
     g.beginPath();
-    g.moveTo(W / 2, 20);
-    g.lineTo(W / 2, H - 20);
+    for(let a=0; a<=Math.PI*2; a+=0.2) {
+        const px = getX(LOGIC_W/2 + Math.cos(a)*120, LOGIC_H/2 + Math.sin(a)*80);
+        const py = getY(LOGIC_H/2 + Math.sin(a)*80);
+        if(a===0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
     g.strokePath();
 
-    // Center circle
-    g.strokeCircle(W / 2, H / 2, 60);
-
-    // Center dot
-    g.fillStyle(0x1e4976, 1);
-    g.fillCircle(W / 2, H / 2, 3);
-
-    // Left penalty area
-    const paW = 80, paH = 200;
-    g.strokeRect(20, (H - paH) / 2, paW, paH);
-
-    // Left goal area
-    g.strokeRect(20, (H - 80) / 2, 30, 80);
-
-    // Right penalty area
-    g.strokeRect(W - 20 - paW, (H - paH) / 2, paW, paH);
-
-    // Right goal area
-    g.strokeRect(W - 20 - 30, (H - 80) / 2, 30, 80);
-
-    // Penalty spots
-    g.fillStyle(0x1e4976, 1);
-    g.fillCircle(20 + 60, H / 2, 3);
-    g.fillCircle(W - 20 - 60, H / 2, 3);
-
-    // Goals (thick lines)
-    g.lineStyle(3, 0x4a90e2, 0.9);
-    g.strokeRect(10, (H - 70) / 2, 12, 70);   // left goal
-    g.strokeRect(W - 22, (H - 70) / 2, 12, 70); // right goal
+    g.lineStyle(6, 0x60a5fa, 0.8);
+    const goalY1 = LOGIC_H/2 - 80, goalY2 = LOGIC_H/2 + 80;
+    g.lineBetween(getX(20, goalY1), getY(goalY1), getX(20, goalY2), getY(goalY2));
+    g.lineBetween(getX(LOGIC_W-20, goalY1), getY(goalY1), getX(LOGIC_W-20, goalY2), getY(goalY2));
 
     g.setDepth(0);
   }
 
   private createBall() {
-    const { W, H } = this;
-
-    // Glow behind ball
-    this.ballGlow = this.add.circle(W / 2, H / 2, 14, 0xffffff, 0.08);
-    this.ballGlow.setDepth(8);
-
-    this.ball = this.add.circle(W / 2, H / 2, 6, 0xffffff, 1);
-    this.ball.setDepth(10);
-    this.ball.setStrokeStyle(1.5, 0x4a90e2, 1);
-
-    // Pulse animation on ball
-    this.tweens.add({
-      targets: this.ballGlow,
-      scaleX: 1.5,
-      scaleY: 1.5,
-      alpha: 0.03,
-      yoyo: true,
-      repeat: -1,
-      duration: 800,
-    });
+    this.ball = this.add.container(0, 0);
+    this.ballShadow = this.add.ellipse(0, 10, 15, 6, 0x000000, 0.4);
+    this.ballSprite = this.add.arc(0, 0, 8, 0, 360, false, 0xffffff);
+    this.ballSprite.setStrokeStyle(1.5, 0x4a90e2, 1);
+    this.ball.add([this.ballShadow, this.ballSprite]);
   }
 
   private onInitMatch(data: InitData) {
-    const { W, H } = this;
-
-    // Clear old players
     this.playerMap.forEach(p => p.container.destroy());
     this.playerMap.clear();
 
     const createTeam = (roster: PlayerDefinition[], isHome: boolean) => {
       roster.forEach((p, idx) => {
-        let x: number, y: number;
+        const uniqueId = `${isHome ? 'home' : 'away'}-${p.id}`;
+        this.playerDefs.set(uniqueId, p);
 
         const isGK = p.roleTags.includes("goalkeeper");
         const isDEF = p.roleTags.includes("defender");
         const isATK = p.roleTags.includes("attacker");
 
-        if (isGK) {
-          x = isHome ? 38 : W - 38;
-          y = H / 2;
-        } else if (isDEF) {
-          x = isHome ? 140 : W - 140;
-          y = H * (0.25 + (idx % 3) * 0.25);
-        } else if (isATK) {
-          x = isHome ? W / 2 - 60 : W / 2 + 60;
-          y = H * (0.25 + (idx % 3) * 0.3);
-        } else {
-          // Midfielder / hybrid
-          x = isHome ? W / 2 - 150 : W / 2 + 150;
-          y = H * (0.3 + (idx % 3) * 0.2);
-        }
+        let wx: number, wy: number;
+        if (isGK) { wx = isHome ? 80 : LOGIC_W - 80; wy = LOGIC_H / 2; }
+        else if (isDEF) { wx = isHome ? 260 : LOGIC_W - 260; wy = LOGIC_H * (0.2 + (idx % 3) * 0.3); }
+        else if (isATK) { wx = isHome ? LOGIC_W/2 - 120 : LOGIC_W/2 + 120; wy = LOGIC_H * (0.2 + (idx % 3) * 0.3); }
+        else { wx = isHome ? LOGIC_W/2 - 250 : LOGIC_W/2 + 250; wy = LOGIC_H * (0.25 + (idx % 3) * 0.25); }
 
-        // Jitter slightly
-        x += Phaser.Math.Between(-10, 10);
-        y = Math.max(30, Math.min(H - 30, y + Phaser.Math.Between(-20, 20)));
+        const container = this.add.container(this.getScreenX(wx, wy), this.getScreenY(wy));
+        const tierColor = { bronze: 0xcd7f32, silver: 0xc0c0c0, gold: 0xffd700, legendary: 0xa855f7 }[p.tier] || 0xffffff;
+        
+        const shadow = this.add.ellipse(0, 35, 40, 15, 0x000000, 0.4);
+        const cardWidth = 50, cardHeight = 70;
+        const card = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x111827, 0.95).setStrokeStyle(2.5, isHome ? 0x6366f1 : 0xf43f5e, 1);
+        const portrait = this.add.image(0, -10, `portrait-${p.portrait}`).setDisplaySize(42, 42);
+        
+        const role = isGK ? "GK" : isDEF ? "DF" : isATK ? "AT" : "MD";
+        const roleBg = this.add.circle(-cardWidth/2+10, -cardHeight/2+10, 8, 0x1f2937, 1).setStrokeStyle(1, 0xffffff, 0.3);
+        const roleText = this.add.text(-cardWidth/2+10, -cardHeight/2+10, role, { fontSize: "7px", fontWeight: "bold", color: "#ffffff" }).setOrigin(0.5);
 
-        const container = this.add.container(x, y);
-
-        // Outer glow ring
-        const glow = this.add.circle(0, 0, 18, isHome ? 0x6366f1 : 0xf43f5e, 0.15);
-
-        // Main circle
-        const circle = this.add.circle(0, 0, 13, isHome ? 0x6366f1 : 0xef4444, 1);
-        circle.setStrokeStyle(1.5, isHome ? 0x818cf8 : 0xfca5a5, 1);
-
-        // Initial
-        const initial = this.add.text(0, 0, p.name[0].toUpperCase(), {
-          fontSize: "10px",
-          color: "#ffffff",
-          fontFamily: "Arial",
-          fontStyle: "bold",
-        }).setOrigin(0.5);
-
-        container.add([glow, circle, initial]);
-        container.setDepth(5);
-
-        this.playerMap.set(p.id, { container, baseX: x, baseY: y, isHome });
-
-        // Entrance animation
-        container.setAlpha(0);
-        container.setScale(0.3);
-        this.tweens.add({
-          targets: container,
-          alpha: 1,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 500 + idx * 100,
-          ease: "Back.easeOut",
-        });
+        const nameLabelBg = this.add.rectangle(0, 25, cardWidth-10, 12, 0x000000, 0.6);
+        const nameText = this.add.text(0, 25, p.name.split(' ')[0], { fontSize: "8px", color: "#ffffff" }).setOrigin(0.5);
+        const indicator = this.add.circle(cardWidth/2 - 6, -cardHeight/2 + 6, 6, isHome ? 0x6366f1 : 0xf43f5e, 1).setStrokeStyle(1.5, 0xffffff, 1);
+        
+        container.add([shadow, card, portrait, roleBg, roleText, nameLabelBg, nameText, indicator]);
+        this.playerMap.set(uniqueId, { container, card, worldX: wx, worldY: wy, baseX: wx, baseY: wy, isHome, isMoving: false });
       });
     };
 
     createTeam(data.homeRoster, true);
     createTeam(data.awayRoster, false);
-
-    // Reset ball to center
-    this.tweens.add({
-      targets: [this.ball, this.ballGlow],
-      x: W / 2,
-      y: H / 2,
-      duration: 400,
-      ease: "Power2",
-    });
-  }
-
-  private moveBallTo(x: number, y: number, duration = 300) {
-    this.tweens.add({
-      targets: [this.ball, this.ballGlow],
-      x, y,
-      duration,
-      ease: "Power2",
-    });
-  }
-
-  private pulsePlayer(sprite: PlayerSprite) {
-    this.tweens.add({
-      targets: sprite.container,
-      scaleX: 1.35,
-      scaleY: 1.35,
-      yoyo: true,
-      duration: 120,
-      ease: "Power1",
-    });
-  }
-
-  private driftTowardsAction(actorSprite: PlayerSprite, targetX: number, targetY: number) {
-    // Move actor towards action zone
-    this.tweens.add({
-      targets: actorSprite.container,
-      x: actorSprite.container.x + (targetX - actorSprite.container.x) * 0.4,
-      y: actorSprite.container.y + (targetY - actorSprite.container.y) * 0.3,
-      duration: 600,
-      ease: "Sine.easeInOut",
-    });
-  }
-
-  private driftBackToBase(sprite: PlayerSprite, delay = 1500) {
-    this.time.delayedCall(delay, () => {
-      this.tweens.add({
-        targets: sprite.container,
-        x: sprite.baseX + Phaser.Math.Between(-15, 15),
-        y: sprite.baseY + Phaser.Math.Between(-15, 15),
-        duration: 1200,
-        ease: "Sine.easeInOut",
-      });
-    });
+    this.ballWorldX = LOGIC_W / 2; this.ballWorldY = LOGIC_H / 2;
   }
 
   private onMatchEvent(event: MatchEvent) {
-    const { W, H } = this;
-    const actor = event.actorId ? this.playerMap.get(event.actorId) : null;
-    const target = event.targetId ? this.playerMap.get(event.targetId) : null;
+    const actorId = event.actorId ? (this.playerMap.has(`home-${event.actorId}`) ? `home-${event.actorId}` : `away-${event.actorId}`) : null;
+    const targetId = event.targetId ? (this.playerMap.has(`home-${event.targetId}`) ? `home-${event.targetId}` : `away-${event.targetId}`) : null;
+
+    const actor = actorId ? this.playerMap.get(actorId) : null;
+    const target = targetId ? this.playerMap.get(targetId) : null;
+
+    if(actor) this.tweens.killTweensOf(actor);
+    
+    if (event.team === "home" && ["pass", "dribble", "save", "goal"].includes(event.type)) {
+        this.ultimateCharge = Math.min(100, this.ultimateCharge + (event.type === "goal" ? 25 : 5));
+    }
 
     switch (event.type) {
       case "kickoff":
-        this.moveBallTo(W / 2, H / 2, 400);
-        // Reset all players toward their base with slight drift
-        this.playerMap.forEach(s => this.driftBackToBase(s, 0));
+        try { this.sound.play('whistle'); } catch(e){}
+        this.ballWorldX = LOGIC_W/2; this.ballWorldY = LOGIC_H/2;
+        this.possession = event.team;
         break;
-
       case "pass":
         if (actor && target) {
-          this.pulsePlayer(actor);
-          // Ball moves from actor to target
-          this.moveBallTo(actor.container.x, actor.container.y, 150);
-          this.time.delayedCall(150, () => {
-            if (target) this.moveBallTo(target.container.x, target.container.y, 350);
-          });
-          // Actor drifts toward center
-          this.driftTowardsAction(actor, target.container.x, target.container.y);
-          this.driftBackToBase(actor);
+          this.possession = event.team;
+          this.tweens.add({ targets: this, ballWorldX: target.worldX, ballWorldY: target.worldY, duration: 400, ease: "Sine.easeOut" });
         }
         break;
-
       case "dribble":
-        if (actor) {
-          this.pulsePlayer(actor);
-          const driftX = actor.isHome ? actor.container.x + 25 : actor.container.x - 25;
-          this.moveBallTo(driftX, actor.container.y, 300);
-          this.tweens.add({
-            targets: actor.container,
-            x: driftX,
-            duration: 400,
-            ease: "Power1",
-          });
-          this.driftBackToBase(actor);
-        }
-        break;
-
-      case "tackle":
-        if (actor && target) {
-          // Actor rushes toward target
-          const prevX = actor.container.x;
-          const prevY = actor.container.y;
-          this.tweens.add({
-            targets: actor.container,
-            x: target.container.x + Phaser.Math.Between(-10, 10),
-            y: target.container.y + Phaser.Math.Between(-10, 10),
-            duration: 250,
-            ease: "Power3",
-            onComplete: () => {
-              this.tweens.add({
-                targets: actor.container,
-                x: prevX,
-                y: prevY,
-                duration: 600,
-                ease: "Power1",
-              });
-            },
-          });
-          this.moveBallTo(target.container.x, target.container.y, 200);
-        }
-        break;
-
       case "possession_change":
         if (actor) {
-          this.moveBallTo(actor.container.x, actor.container.y, 300);
-          // Push all actors slightly toward their attack third
-          this.playerMap.forEach((s) => {
-            if (s.isHome === actor.isHome) {
-              const pushX = s.isHome ? s.container.x + 20 : s.container.x - 20;
-              this.tweens.add({
-                targets: s.container,
-                x: Math.max(20, Math.min(W - 20, pushX)),
-                duration: 800,
-                ease: "Sine.easeInOut",
-              });
-            } else {
-              this.driftBackToBase(s, 200);
-            }
-          });
+            this.possession = event.team;
+            this.tweens.add({ targets: this, ballWorldX: actor.worldX, ballWorldY: actor.worldY, duration: 300 });
         }
         break;
-
-      case "shot":
-        if (actor) {
-          this.pulsePlayer(actor);
-          const goalX = actor.isHome ? W - 22 : 22;
-          const goalY = H / 2 + Phaser.Math.Between(-30, 30);
-          this.moveBallTo(actor.container.x, actor.container.y, 100);
-          this.time.delayedCall(100, () => this.moveBallTo(goalX, goalY, 350));
-        }
-        break;
-
       case "save":
-        if (actor) {
-          this.pulsePlayer(actor);
-          const reboundX = actor.isHome ? W * 0.15 : W * 0.85;
-          this.time.delayedCall(350, () => this.moveBallTo(reboundX, H / 2 + Phaser.Math.Between(-40, 40), 300));
+        try { this.sound.play('save'); } catch(e){}
+        if (actor && target) {
+            const sDef = this.playerDefs.get(targetId!);
+            const kDef = this.playerDefs.get(actorId!);
+            if (sDef && kDef) this.showClash(sDef, kDef, "GRANDE PARATA!");
+            this.tweens.add({ targets: this, ballWorldX: actor.worldX + (actor.isHome ? 100 : -100), ballWorldY: LOGIC_H/2, duration: 450 });
         }
         break;
-
-      case "goal": {
+      case "goal":
+        try { this.sound.play('goal'); } catch(e){}
         const isHome = event.team === "home";
-        const goalX = isHome ? W - 18 : 18;
-        this.moveBallTo(goalX, H / 2, 400);
-
-        // Screen shake + flash
-        this.time.delayedCall(400, () => {
-          this.cameras.main.shake(400, 0.018);
-          const flash = this.add.rectangle(0, 0, W, H, isHome ? 0x6366f1 : 0xef4444, 0.25).setOrigin(0).setDepth(20);
-          this.tweens.add({ targets: flash, alpha: 0, duration: 500, onComplete: () => flash.destroy() });
-
-          // Push scoring team forward
-          this.playerMap.forEach((s) => {
-            if (s.isHome === isHome) {
-              this.tweens.add({
-                targets: s.container,
-                x: s.container.x + (isHome ? 20 : -20),
-                y: H / 2 + Phaser.Math.Between(-30, 30),
-                duration: 600,
-                ease: "Power2",
-              });
-            }
-          });
-        });
-
-        // Reset after celebration
-        this.time.delayedCall(2000, () => {
-          this.playerMap.forEach(s => this.driftBackToBase(s, 0));
-          this.moveBallTo(W / 2, H / 2, 500);
-        });
-        break;
-      }
-
-      case "halftime":
-        // All players walk back to center half
-        this.playerMap.forEach(s => this.driftBackToBase(s, 0));
-        this.moveBallTo(W / 2, H / 2, 800);
+        this.tweens.add({ targets: this, ballWorldX: isHome ? LOGIC_W - 20 : 20, ballWorldY: LOGIC_H/2, duration: 500 });
+        const scorer = actorId ? this.playerDefs.get(actorId) : null;
+        if (scorer) this.showClash(scorer, null as any, "GOL STREPITOSO!");
+        this.time.delayedCall(500, () => this.cameras.main.shake(400, 0.02));
         break;
     }
   }
 
+  private showClash(p1: PlayerDefinition, p2: PlayerDefinition | null, title: string) {
+    const { screenW, screenH } = this;
+    const overlay = this.add.rectangle(0, 0, screenW, screenH, 0x000000, 0.8).setOrigin(0).setDepth(2000).setAlpha(0);
+    const container = this.add.container(screenW/2, screenH/2).setDepth(2001).setScale(0);
+
+    const titleText = this.add.text(0, -100, title, { fontSize: "32px", color: "#fbbf24" }).setOrigin(0.5).setStroke("#000000", 6);
+    container.add(titleText);
+
+    const createLargeCard = (p: PlayerDefinition, x: number, color: number) => {
+        const card = this.add.container(x, 0);
+        const body = this.add.rectangle(0, 0, 140, 200, 0x1f2937, 1).setStrokeStyle(4, color, 1);
+        const portrait = this.add.image(0, -20, `portrait-${p.portrait}`).setDisplaySize(120, 120);
+        const name = this.add.text(0, 70, p.name.toUpperCase(), { fontSize: "16px", color: "#ffffff" }).setOrigin(0.5);
+        card.add([body, portrait, name]);
+        return card;
+    };
+
+    container.add(createLargeCard(p1, p2 ? -90 : 0, 0x6366f1));
+    if (p2) container.add(createLargeCard(p2, 90, 0xf43f5e));
+
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 200 });
+    this.tweens.add({ targets: container, scale: 1, duration: 400, ease: "Back.easeOut", onComplete: () => {
+        this.time.delayedCall(1600, () => {
+            this.tweens.add({ targets: [overlay, container], alpha: 0, duration: 300, onComplete: () => {
+                overlay.destroy(); container.destroy();
+            }});
+        });
+    }});
+  }
+
   private onMatchFinished() {
-    this.cameras?.main?.fade(1500, 5, 10, 20);
+    try { this.sound.play('whistle'); } catch(e){}
+    this.cameras.main.flash(500, 255, 255, 255);
+    this.time.delayedCall(500, () => this.cameras.main.fade(1500, 5, 10, 20));
   }
 }

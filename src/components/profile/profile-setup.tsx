@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useGameStore } from "@/lib/store/game-store";
+import { useRouter } from "next/navigation";
 
 const BADGES = [
   { id: "badge_lightning", emoji: "⚡", name: "Lightning" },
@@ -12,6 +13,7 @@ const BADGES = [
 ];
 
 export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
+  const router = useRouter();
   const { teamName, username: currentUsername, badgeId, user, updateProfile } = useGameStore();
   const [name, setName] = useState(teamName);
   const [username, setUsername] = useState(currentUsername);
@@ -38,6 +40,11 @@ export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean
 
     setLoading(false);
     if (onClose) onClose();
+    
+    // If it was the initial setup, redirect to squad with claim flag
+    if (isDefault) {
+      router.push("/squad?claim=true");
+    }
   };
 
   if (!showModal) return null;
@@ -100,7 +107,7 @@ export function ProfileSetup({ isOpen: manualOpen, onClose }: { isOpen?: boolean
             disabled={loading || !name.trim()}
             className="w-full btn-primary py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl disabled:opacity-30"
           >
-            {loading ? "Registrazione..." : isDefault ? "Inizia il Matchday →" : "Salva Modifiche"}
+            {loading ? "Registrazione..." : isDefault ? "Ricevi Starter Pack →" : "Salva Modifiche"}
           </button>
         </div>
       </div>

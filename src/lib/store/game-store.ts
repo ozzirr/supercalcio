@@ -27,7 +27,6 @@ type GameState = {
   teamName: string;
   username: string;
   badgeId: string;
-  availablePlayers: PlayerDefinition[];
   ownedPlayers: any[]; // User's roster with levels and bonuses
   isProfileModalOpen: boolean;
   setProfileModalOpen: (open: boolean) => void;
@@ -277,7 +276,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
           } else if (data.session?.user) {
             // Fallback for existing users without a profile
-            const { data: newUserProfile } = await supabase.from('profiles').insert({
+            const { data: newUserProfile, error: insertError } = await supabase.from('profiles').insert({
               id: data.session.user.id,
               username: data.session.user.email?.split('@')[0] || "manager",
               team_name: "Squad " + data.session.user.id.substring(0, 4)
