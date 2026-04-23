@@ -24,7 +24,9 @@ export type MatchEventType =
   | "stance_change"
   | "command_issued"
   | "halftime"
-  | "full_time";
+  | "full_time"
+  | "yellow_card"
+  | "red_card";
 
 export type MatchEvent = {
   tick: number;
