@@ -10,10 +10,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { MatchOverlay } from "@/components/game/MatchOverlay";
+import { MenuMusicPlayer } from "@/components/layout/menu-music-player";
 
 export default function GameLayout({ children }: { children: React.ReactNode }) {
   const initializeUser = useGameStore(s => s.initializeUser);
-  const user = useGameStore(s => s.user);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const isProfileModalOpen = useGameStore(s => s.isProfileModalOpen);
@@ -56,6 +56,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
       <ProfileSetup isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} />
       <NavBar onOpenProfile={() => setProfileModalOpen(true)} />
       <MatchOverlay />
+      <MenuMusicPlayer />
       <main className="flex-1 flex flex-col pb-16 lg:pb-0">{children}</main>
       <MobileTabBar />
     </>

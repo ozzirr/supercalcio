@@ -4,6 +4,7 @@ import { matchAudio } from "./match-audio";
 import type { MatchEvent } from "@/types/match";
 import type { PlayerDefinition } from "@/types/player";
 import { STARTER_PLAYERS } from "@/content/players";
+import { speechEngine } from "./speech-engine";
 
 type InitData = {
   homeRoster: PlayerDefinition[];
@@ -104,7 +105,8 @@ export class MatchScene extends Phaser.Scene {
     // Match Engine 2.0 Assets
     this.load.image("match-grass", "/match/grass_texture.png"); // Kept as fall-back or for patterns
     this.load.image("match-stadium", "/match/stadium_backdrop.png");
-    this.load.image("match-player", "/match/player_athlete.png");
+    this.load.image("match-player-white", "/match/p_white1.png");
+    this.load.image("match-player-black", "/match/p_black_1.png");
     this.load.image("match-ball", "/match/ball.png");
   }
 
@@ -457,6 +459,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onInitMatch(data: InitData) {
+    if (!this.scene || !this.scene.isActive()) return;
     if (!this.add) return;
     this.equippedStadium = data.stadiumId || "stadium_default";
     this.equippedKit = data.kitId || "kit_default";
@@ -498,22 +501,16 @@ export class MatchScene extends Phaser.Scene {
         const shadow = this.add.ellipse(0, 10, 40, 15, 0x000000, 0.4);
         
         // 2. Athlete Billboard
-        const athlete = this.add.image(0, -35, "match-player")
-            .setDisplaySize(80, 100)
-            .setTint(teamColor); // Subtle kit tint
-
-        // 3. Compact Floating Portrait (for identification)
-        const portrait = this.add.image(-15, -75, `portrait-${p.portrait}`)
-            .setDisplaySize(28, 28);
-        const portraitFrame = this.add.circle(-15, -75, 15, 0x000000, 0.5)
-            .setStrokeStyle(1.5, teamColor, 1);
+        const playerTexture = isHome ? "match-player-white" : "match-player-black";
+        const athlete = this.add.image(0, -35, playerTexture)
+            .setDisplaySize(80, 100);
 
         // 4. Name Tag
-        const nameText = this.add.text(0, -95, p.name.split(" ")[0].toUpperCase(),
+        const nameText = this.add.text(0, -75, p.name.split(" ")[0].toUpperCase(),
                           { fontSize: "10px", fontStyle: "bold", color: "#ffffff", stroke: "#000000", strokeThickness: 2 })
                           .setOrigin(0.5);
 
-        container.add([shadow, athlete, portraitFrame, portrait, nameText]);
+        container.add([shadow, athlete, nameText]);
 
         this.playerMap.set(uniqueId, {
           container,
@@ -549,8 +546,11 @@ export class MatchScene extends Phaser.Scene {
     matchAudio.play("whistle");
   }
 
+
+
   private onMatchEvent(event: MatchEvent) {
-    if (!this.add || !this.scene.isActive()) return;
+    if (!this.scene?.isActive?.()) return;
+    if (!this.add) return;
     const actorId  = event.actorId
       ? (this.playerMap.has(`home-${event.actorId}`) ? `home-${event.actorId}` : `away-${event.actorId}`)
       : null;
@@ -560,6 +560,12 @@ export class MatchScene extends Phaser.Scene {
 
     const actor  = actorId  ? this.playerMap.get(actorId)  : null;
     const target = targetId ? this.playerMap.get(targetId) : null;
+    
+    const actorDef = actorId ? this.playerDefs.get(actorId) : null;
+    const targetDef = targetId ? this.playerDefs.get(targetId) : null;
+
+    // AI Commentary
+    speechEngine.announceEvent(event, actorDef || null, targetDef || null);
 
     if (actor) this.tweens.killTweensOf(actor);
 
@@ -646,7 +652,7 @@ export class MatchScene extends Phaser.Scene {
     const createLargeCard = (p: PlayerDefinition, x: number, color: number) => {
       const card    = this.add.container(x, 20);
       const body    = this.add.rectangle(0, 0, 100, 140, 0x1f2937, 1).setStrokeStyle(3, color, 1);
-      const portrait = this.add.image(0, -15, `portrait-${p.portrait}`).setDisplaySize(80, 80);
+      const portrait = this.add.image(0, -15, p.portrait).setDisplaySize(80, 80);
       const name    = this.add.text(0, 50, p.name.split(" ")[0].toUpperCase(), { fontSize: "14px", fontStyle: "bold", color: "#ffffff" }).setOrigin(0.5);
       card.add([body, portrait, name]);
       return card;

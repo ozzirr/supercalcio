@@ -84,7 +84,7 @@ export default function LoginPage() {
           {/* Title */}
           <div className="space-y-4">
             <h1 className="text-7xl font-black uppercase tracking-tighter leading-none italic">
-              Super<span className="text-accent">calcio</span>
+              GI<span className="text-accent">OOL</span>
             </h1>
             <p className="text-xl text-foreground/80 font-medium tracking-tight max-w-lg leading-relaxed">
               Il primo simulatore di calcio cyberpunk 5v5. Costruisci la squadra,
@@ -151,7 +151,7 @@ export default function LoginPage() {
           {/* Logo visible on mobile only */}
           <div className="md:hidden text-center mb-12">
             <h1 className="text-4xl font-black italic tracking-tighter">
-              Super<span className="text-accent">calcio</span>
+              GI<span className="text-accent">OOL</span>
             </h1>
             <p className="text-xs text-muted mt-2">Il calcio del futuro è adesso.</p>
           </div>
@@ -181,7 +181,7 @@ export default function LoginPage() {
                   type="email"
                   required
                   className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground focus:outline-none focus:border-accent focus:bg-white/10 transition-all font-medium"
-                  placeholder="manager@supercalcio.com"
+                  placeholder="manager@giool.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />

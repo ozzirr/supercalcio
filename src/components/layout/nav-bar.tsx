@@ -26,7 +26,7 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
       <div className="flex items-center justify-between px-4 lg:px-6 py-3">
         <div className="flex items-center gap-4 lg:gap-8">
           <Link href="/dashboard" className="text-xl lg:text-2xl font-black italic tracking-tighter text-accent uppercase shrink-0">
-            SUPER<span className="text-white">CALCIO</span>
+            GI<span className="text-white">OOL</span>
           </Link>
           
           {/* Desktop Nav */}

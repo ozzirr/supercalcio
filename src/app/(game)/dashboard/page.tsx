@@ -31,7 +31,7 @@ const FEATURES = [
   {
     icon: "⚔️",
     title: "Ranking Globale",
-    desc: "Sfida le squadre degli altri manager. Più vinci, più sali nel ranking globale di Supercalcio.",
+    desc: "Sfida le squadre degli altri manager. Più vinci, più sali nel ranking globale di GIOOL.",
   },
   {
     icon: "🎁",
@@ -111,7 +111,7 @@ export default function DashboardPage() {
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/40 bg-accent/10 text-accent text-[8px] lg:text-[10px] uppercase tracking-[0.2em] font-black mb-6 lg:mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            Supercalcio &bull; Season 1: The Throne
+            GIOOL &bull; Season 1: The Throne
           </div>
 
           <div className="flex justify-center mb-3 lg:mb-4">
