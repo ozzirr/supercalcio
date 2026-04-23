@@ -1,6 +1,8 @@
 import type { PlayerDefinition } from "@/types/player";
 import type { PlayerRole } from "../engine/EngineConstants";
 
+export type AnimationState = "idle" | "run" | "pass" | "shoot" | "tackle" | "save";
+
 export class PlayerEntity {
   id: string;
   def: PlayerDefinition;
@@ -20,6 +22,9 @@ export class PlayerEntity {
   isHome: boolean;
   role: PlayerRole;
   personalBias: number;
+  
+  // State
+  animState: AnimationState;
   
   // AI Timers
   thinkTimer: number;
@@ -47,6 +52,7 @@ export class PlayerEntity {
     this.targetX = startX;
     this.targetY = startY;
     this.personalBias = bias;
+    this.animState = "idle";
 
     this.thinkTimer = Math.random() * 900;
     this.noiseX = 0;

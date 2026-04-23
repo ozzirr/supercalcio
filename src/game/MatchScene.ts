@@ -13,6 +13,8 @@ import { BallEntity } from "./entities/BallEntity";
 import { TacticalSystem } from "./systems/TacticalSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
+import { CameraSystem } from "./systems/CameraSystem";
+import { AnimationSystem } from "./systems/AnimationSystem";
 
 type InitData = {
   homeRoster: PlayerDefinition[];
@@ -44,14 +46,17 @@ export class MatchScene extends Phaser.Scene {
   private ballSprite!: Phaser.GameObjects.Arc;
 
   // View state
-  private camX = 500;
-  private camLerp = 0.05;
+  private cameraSystem: CameraSystem = new CameraSystem();
   private screenW = 800;
   private screenH = 400;
 
   // Visuals
   private pitchGraphics!: Phaser.GameObjects.Graphics;
   private stadiumBackdrop!: Phaser.GameObjects.TileSprite;
+  
+  // Particles
+  private dirtParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confettiParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   private initMatchHandler!: (data: InitData) => void;
   private matchEventHandler!: (event: MatchEvent) => void;
@@ -68,7 +73,7 @@ export class MatchScene extends Phaser.Scene {
     });
 
     this.load.image("match-grass", "/match/grass_texture.png");
-    this.load.image("match-stadium", "/match/stadium_backdrop.png");
+    this.load.image("match-stadium", "/match/stadium_backdrop_new.png");
     this.load.image("match-player-white", "/match/p_white1.png");
     this.load.image("match-player-black", "/match/p_black_1.png");
     this.load.image("match-ball", "/match/ball.png");
@@ -79,8 +84,25 @@ export class MatchScene extends Phaser.Scene {
     this.screenH = this.scale.height;
     this.renderSystem = new RenderSystem(this.screenW, this.screenH);
 
+    // Create background sky
+    this.add.rectangle(this.screenW/2, this.screenH/2, this.screenW, this.screenH, 0x0a162d).setDepth(-100);
+
+    this.stadiumBackdrop = this.add.tileSprite(this.screenW/2, 70, this.screenW * 2, 380, "match-stadium")
+        .setScrollFactor(0)
+        .setDepth(-10)
+        .setScale(1)
+        .setAlpha(1);
+    this.stadiumBackdrop.tilePositionY = 150;
+
+    // A static Vignette for the field
+    const overlay = this.add.graphics();
+    overlay.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.4, 0.4, 0, 0);
+    overlay.fillRect(0, 0, this.screenW, this.screenH);
+    overlay.setDepth(1).setAlpha(0.2).setScrollFactor(0);
+
     this.drawPitch();
     this.createBall();
+    this.createEmitters();
 
     this.input.on("pointerdown", () => {
       matchAudio.unlock();
@@ -127,8 +149,7 @@ export class MatchScene extends Phaser.Scene {
 
     // 1. Logic Update
     // Camera Logic
-    const targetCamX = Phaser.Math.Clamp(this.ballEntity.worldX, 200, 800);
-    this.camX += (targetCamX - this.camX) * this.camLerp;
+    this.cameraSystem.update(this.ballEntity, delta);
 
     // Entities Logic
     this.players.forEach(p => {
@@ -142,6 +163,7 @@ export class MatchScene extends Phaser.Scene {
     });
 
     MovementSystem.update(this.players, delta);
+    AnimationSystem.update(this.players, delta);
 
     // Ultimate Logic
     EventBus.emit("ultimate-update", this.ultimateCharge);
@@ -154,12 +176,29 @@ export class MatchScene extends Phaser.Scene {
       const render = this.playerRenders.get(p.id);
       if (!render) return;
 
-      const sx = this.renderSystem.getScreenX(p.worldX, p.worldY, this.camX);
-      const sy = this.renderSystem.getScreenY(p.worldY);
+      const sx = this.renderSystem.getScreenX(p.worldX, p.worldY, this.cameraSystem.camX, this.cameraSystem.zoom);
+      const sy = this.renderSystem.getScreenY(p.worldY, this.cameraSystem.camY, this.cameraSystem.zoom);
       
       render.container.setPosition(sx, sy);
 
-      const pScale = 0.5 + (p.worldY / LOGIC_H) * 0.9;
+      // Card tilt/bounce based on animation state
+      if (p.animState === "run") {
+        render.card.setAngle(Math.sin(time / 100) * 5);
+        render.card.y = -35 + Math.abs(Math.sin(time / 100)) * 5;
+      } else if (p.animState === "idle") {
+        render.card.setAngle(0);
+        render.card.y = -35;
+      } else if (p.animState === "tackle") {
+        render.card.setAngle(45);
+        render.card.y = -20;
+      } else if (p.animState === "shoot" || p.animState === "pass") {
+        render.card.setAngle(-15);
+      } else if (p.animState === "save") {
+        render.card.setAngle(90);
+        render.card.y = -10;
+      }
+
+      const pScale = (0.5 + (p.worldY / LOGIC_H) * 0.9) * this.cameraSystem.zoom;
       render.container.setScale(pScale);
       render.container.setDepth(200 + p.worldY);
 
@@ -190,43 +229,45 @@ export class MatchScene extends Phaser.Scene {
     });
 
     if (this.ballContainer) {
-      const bsx = this.renderSystem.getScreenX(this.ballEntity.worldX, this.ballEntity.worldY, this.camX);
-      const bsy = this.renderSystem.getScreenY(this.ballEntity.worldY);
-      this.ballContainer.setPosition(bsx, bsy);
+      const bsx = this.renderSystem.getScreenX(this.ballEntity.worldX, this.ballEntity.worldY, this.cameraSystem.camX, this.cameraSystem.zoom);
       
-      const bScale = 0.8 + (this.ballEntity.worldY / LOGIC_H) * 0.6;
+      // Calculate ball rendering height
+      const baseSy = this.renderSystem.getScreenY(this.ballEntity.worldY, this.cameraSystem.camY, this.cameraSystem.zoom);
+      const sz = this.renderSystem.getScreenZ(this.ballEntity.worldZ);
+      
+      this.ballContainer.setPosition(bsx, baseSy - sz);
+      
+      // Keep shadow on ground
+      const shadow = this.ballContainer.getAt(0) as Phaser.GameObjects.Ellipse;
+      shadow.y = 10 + sz; // Offset shadow downward relative to the lifted ball container
+      shadow.alpha = Math.max(0.1, 0.5 - (this.ballEntity.worldZ / 100)); // Fade out as it goes higher
+      shadow.setScale(1 - Math.min(0.5, this.ballEntity.worldZ / 150));
+      
+      const bScale = (0.8 + (this.ballEntity.worldY / LOGIC_H) * 0.6) * this.cameraSystem.zoom;
       this.ballContainer.setScale(bScale);
       this.ballSprite.angle += 10;
       this.ballContainer.setDepth(200 + this.ballEntity.worldY + 1);
 
       if (this.stadiumBackdrop) {
-          this.stadiumBackdrop.tilePositionX = this.camX * 0.2;
+          this.stadiumBackdrop.tilePositionX = this.cameraSystem.camX * 0.2;
       }
     }
+
+    // Redraw pitch graphics to match camera perspective
+    this.drawPitch();
   }
 
   private drawPitch() {
     const { screenW, screenH } = this;
     const rs = this.renderSystem;
 
-    this.add.rectangle(screenW/2, screenH/2, screenW, screenH, 0x0a162d).setDepth(-100);
-
-    if (this.stadiumBackdrop) this.stadiumBackdrop.destroy();
-
-    this.stadiumBackdrop = this.add.tileSprite(screenW/2, 70, screenW * 2, 380, "match-stadium")
-        .setScrollFactor(0)
-        .setDepth(-10)
-        .setScale(1)
-        .setAlpha(1);
-    this.stadiumBackdrop.tilePositionY = 150;
-
     const g = this.pitchGraphics || this.add.graphics();
     if (!this.pitchGraphics) this.pitchGraphics = g;
     g.clear();
     g.setDepth(0);
 
-    const getX = (wx: number, wy: number) => rs.getScreenX(wx, wy, this.camX);
-    const getY = (wy: number) => rs.getScreenY(wy);
+    const getX = (wx: number, wy: number) => rs.getScreenX(wx, wy, this.cameraSystem.camX, this.cameraSystem.zoom);
+    const getY = (wy: number) => rs.getScreenY(wy, this.cameraSystem.camY, this.cameraSystem.zoom);
 
     g.fillStyle(0x05070a, 1);
     g.fillRect(0, 110, screenW, 20);
@@ -287,11 +328,6 @@ export class MatchScene extends Phaser.Scene {
     g.lineBetween(getX(LOGIC_W-20, goalY1), getY(goalY1), getX(LOGIC_W-20+gD, goalY1), getY(goalY1));
     g.lineBetween(getX(LOGIC_W-20, goalY2), getY(goalY2), getX(LOGIC_W-20+gD, goalY2), getY(goalY2));
     g.lineBetween(getX(LOGIC_W-20+gD, goalY1), getY(goalY1), getX(LOGIC_W-20+gD, goalY2), getY(goalY2));
-
-    const overlay = this.add.graphics();
-    overlay.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.4, 0.4, 0, 0);
-    overlay.fillRect(0, 0, screenW, screenH);
-    overlay.setDepth(1).setAlpha(0.2).setScrollFactor(0);
   }
 
   private createBall() {
@@ -302,8 +338,39 @@ export class MatchScene extends Phaser.Scene {
     this.ballContainer.add([ballShadow, ballImg]);
   }
 
+  private createEmitters() {
+    // Dirt particles for tackles/shots
+    this.dirtParticles = this.add.particles(0, 0, "match-ball", {
+      speed: { min: 50, max: 150 },
+      angle: { min: 200, max: 340 },
+      scale: { start: 0.4, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      lifespan: 400,
+      gravityY: 300,
+      tint: [0x3f2e1e, 0x5a4328], // Dirt colors
+      emitting: false
+    });
+    this.dirtParticles.setDepth(2000); // High depth
+
+    // Confetti for goals
+    this.confettiParticles = this.add.particles(0, 0, "match-ball", {
+      x: { min: 0, max: this.screenW },
+      y: -50,
+      speedY: { min: 100, max: 300 },
+      speedX: { min: -50, max: 50 },
+      scale: { start: 0.5, end: 0 },
+      lifespan: 3000,
+      gravityY: 100,
+      tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff],
+      emitting: false,
+      maxParticles: 300,
+      frequency: 20
+    });
+    this.confettiParticles.setDepth(3000);
+  }
+
   private onInitMatch(data: InitData) {
-    if (!this.scene || !this.scene.isActive()) return;
+    if (!this || !this.scene || !this.scene.isActive || !this.scene.isActive()) return;
     
     this.playerRenders.forEach(r => r.container.destroy());
     this.playerRenders.clear();
@@ -338,8 +405,8 @@ export class MatchScene extends Phaser.Scene {
         this.players.push(entity);
 
         // Visual Representation
-        const sx = this.renderSystem.getScreenX(wx, wy, this.camX);
-        const sy = this.renderSystem.getScreenY(wy);
+        const sx = this.renderSystem.getScreenX(wx, wy, this.cameraSystem.camX, this.cameraSystem.zoom);
+        const sy = this.renderSystem.getScreenY(wy, this.cameraSystem.camY, this.cameraSystem.zoom);
         const container = this.add.container(sx, sy);
         
         const shadow = this.add.ellipse(0, 10, 40, 15, 0x000000, 0.4);
@@ -363,7 +430,9 @@ export class MatchScene extends Phaser.Scene {
     createTeam(data.awayRoster, false);
 
     this.ballEntity.reset();
-    this.camX = 500;
+    this.cameraSystem.camX = 500;
+    this.cameraSystem.camY = 300;
+    this.cameraSystem.zoom = 1.0;
     this.ultimateCharge = 0;
     EventBus.emit("ultimate-update", 0);
 
@@ -371,7 +440,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onMatchEvent(event: MatchEvent) {
-    if (!this.scene?.isActive?.()) return;
+    if (!this || !this.scene || !this.scene.isActive || !this.scene.isActive()) return;
 
     const actorId  = event.actorId ? (this.playerDefs.has(`home-${event.actorId}`) ? `home-${event.actorId}` : `away-${event.actorId}`) : null;
     const targetId = event.targetId ? (this.playerDefs.has(`home-${event.targetId}`) ? `home-${event.targetId}` : `away-${event.targetId}`) : null;
@@ -400,12 +469,23 @@ export class MatchScene extends Phaser.Scene {
       case "pass":
         if (actor && target) {
           this.possession = event.team;
+          AnimationSystem.triggerEventAnimation(actor, "pass");
+          
           this.tweens.add({
             targets: this.ballEntity,
             worldX: target.worldX,
             worldY: target.worldY,
             duration: 400,
-            ease: "Sine.easeOut",
+            ease: "Linear",
+          });
+
+          // Parabolic pass arc
+          this.tweens.add({
+            targets: this.ballEntity,
+            worldZ: 60,
+            duration: 200,
+            yoyo: true,
+            ease: "Quad.easeOut"
           });
         }
         break;
@@ -414,10 +494,22 @@ export class MatchScene extends Phaser.Scene {
       case "possession_change":
         if (actor) {
           this.possession = event.team;
+          
+          if (event.type === "possession_change" && target) {
+            // Tackle!
+            AnimationSystem.triggerEventAnimation(target, "tackle");
+            const screenX = this.renderSystem.getScreenX(target.worldX, target.worldY, this.cameraSystem.camX, this.cameraSystem.zoom);
+            const screenY = this.renderSystem.getScreenY(target.worldY, this.cameraSystem.camY, this.cameraSystem.zoom);
+            this.dirtParticles.emitParticleAt(screenX, screenY, 15);
+            this.cameras.main.shake(150, 0.005);
+          }
+
+          AnimationSystem.triggerEventAnimation(actor, "run");
           this.tweens.add({
             targets: this.ballEntity,
             worldX: actor.worldX,
             worldY: actor.worldY,
+            worldZ: 0,
             duration: 300,
           });
         }
@@ -429,11 +521,27 @@ export class MatchScene extends Phaser.Scene {
           const sDef = this.playerDefs.get(targetId!);
           const kDef = this.playerDefs.get(actorId!);
           if (sDef && kDef) this.showClash(sDef, kDef, "GRANDE PARATA!");
+          
+          AnimationSystem.triggerEventAnimation(actor, "shoot");
+          AnimationSystem.triggerEventAnimation(target, "save");
+          this.cameraSystem.focusOn(target.worldX, target.worldY, 1.4);
+
           this.tweens.add({
             targets: this.ballEntity,
-            worldX: actor.worldX + (actor.isHome ? 100 : -100),
-            worldY: LOGIC_H / 2,
-            duration: 450,
+            worldX: target.worldX,
+            worldY: target.worldY,
+            duration: 200,
+            onComplete: () => {
+              this.tweens.add({
+                targets: this.ballEntity,
+                worldX: actor.worldX + (actor.isHome ? 100 : -100),
+                worldY: LOGIC_H / 2,
+                worldZ: 30,
+                duration: 450,
+                yoyo: true,
+                onComplete: () => this.cameraSystem.resetZoom()
+              });
+            }
           });
         }
         break;
@@ -441,15 +549,34 @@ export class MatchScene extends Phaser.Scene {
       case "goal":
         matchAudio.play("goal");
         const isHome = event.team === "home";
+        if (actor) {
+           AnimationSystem.triggerEventAnimation(actor, "shoot");
+           const screenX = this.renderSystem.getScreenX(actor.worldX, actor.worldY, this.cameraSystem.camX, this.cameraSystem.zoom);
+           const screenY = this.renderSystem.getScreenY(actor.worldY, this.cameraSystem.camY, this.cameraSystem.zoom);
+           this.dirtParticles.emitParticleAt(screenX, screenY, 20);
+        }
+        
+        const goalX = isHome ? LOGIC_W - 20 : 20;
+        this.cameraSystem.focusOn(goalX, LOGIC_H / 2, 1.5);
+        
         this.tweens.add({
           targets: this.ballEntity,
-          worldX: isHome ? LOGIC_W - 20 : 20,
+          worldX: goalX,
           worldY: LOGIC_H / 2,
-          duration: 500,
+          worldZ: 40,
+          duration: 300,
+          yoyo: true,
+          onComplete: () => {
+            this.confettiParticles.start();
+            this.time.delayedCall(2000, () => {
+               this.cameraSystem.resetZoom();
+               this.confettiParticles.stop();
+            });
+          }
         });
         const scorer = actorId ? this.playerDefs.get(actorId) : null;
         if (scorer) this.showClash(scorer, null as any, "GOL STREPITOSO!");
-        this.time.delayedCall(500, () => this.cameras.main.shake(400, 0.02));
+        this.time.delayedCall(300, () => this.cameras.main.shake(400, 0.02));
         break;
     }
   }

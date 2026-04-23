@@ -121,7 +121,7 @@ export default function MatchPage() {
       startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
 
       // Trigger pre-match presentation
-      const homeName = useGameStore.getState().userProfile?.team_name || useGameStore.getState().userProfile?.username || "GIOOL FC";
+      const homeName = useGameStore.getState().teamName || useGameStore.getState().username || "GIOOL FC";
       speechEngine.announcePresentation(homeName, awayName);
 
       setTimeout(() => {
