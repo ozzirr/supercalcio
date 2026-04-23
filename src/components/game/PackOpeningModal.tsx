@@ -90,7 +90,7 @@ export function PackOpeningModal({ packType, revealedPlayer, onClose }: PackOpen
               'border-white/20 shadow-white/10'}
           `}>
              <img 
-               src={`/portraits/${revealedPlayer?.portrait}.png`} 
+               src={`/assets/portraits/${revealedPlayer?.portrait}.png`} 
                alt={revealedPlayer?.name} 
                className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" 
              />

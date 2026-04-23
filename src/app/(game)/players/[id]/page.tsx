@@ -53,7 +53,7 @@ export default function PlayerDetailPage({ params }: { params: Promise<{ id: str
         <div className="relative group perspective-1000">
           <div className="relative z-10 card p-0 overflow-hidden border-2 border-accent/40 shadow-[0_0_50px_rgba(251,191,36,0.15)] transition-all group-hover:shadow-[0_0_70px_rgba(251,191,36,0.25)]">
             <div className="relative aspect-[3/4]">
-              <img src={`/portraits/${playerBase.portrait}.png`} alt={playerBase.name} className="w-full h-full object-cover" />
+              <img src={`/assets/portraits/${playerBase.portrait}.png`} alt={playerBase.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
               
               {/* Overlay Stats */}

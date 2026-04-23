@@ -267,7 +267,7 @@ export default function SquadPage() {
                       <>
                         <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-xl relative overflow-hidden ring-1 ring-accent/30 group-hover:ring-accent">
                           {player.portrait ? (
-                            <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+                            <img src={`/assets/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
                           ) : (
                             player.name[0]
                           )}
@@ -447,7 +447,7 @@ export default function SquadPage() {
                 >
                   <div className="relative">
                     <div className="aspect-[4/5] rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-accent transition-all shadow-xl group-hover:scale-[1.05] duration-300">
-                       <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+                       <img src={`/assets/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black to-transparent">
                           <div className="font-black uppercase italic text-[10px] lg:text-xs truncate text-white">{player.name}</div>
                           <div className="text-[8px] lg:text-[10px] text-accent font-black uppercase tracking-widest">{player.tier}</div>

@@ -39,7 +39,7 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold shrink-0 relative overflow-hidden border border-accent/30">
             {player.portrait ? (
-              <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + player.name + '&background=Random&color=fff&size=200'; }} />
+              <img src={`/assets/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + player.name + '&background=Random&color=fff&size=200'; }} />
             ) : (
               player.name[0]
             )}
@@ -60,7 +60,7 @@ export function PlayerCard({ player, selected, onClick, compact }: PlayerCardPro
       }`}
     >
       <div className="relative aspect-[4/5] overflow-hidden">
-        <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + player.name + '&background=11141c&color=fbbf24&size=400'; }} />
+        <img src={`/assets/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + player.name + '&background=11141c&color=fbbf24&size=400'; }} />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
         
         <div className="absolute bottom-0 inset-x-0 p-4">

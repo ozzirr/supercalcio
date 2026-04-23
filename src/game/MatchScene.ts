@@ -92,7 +92,7 @@ export class MatchScene extends Phaser.Scene {
     // Dynamic preloading of all defined player portraits
     const uniquePortraits = Array.from(new Set(STARTER_PLAYERS.map(p => p.portrait)));
     uniquePortraits.forEach(p => {
-      this.load.image(`portrait-${p}`, `/portraits/${p}.png`);
+      this.load.image(p, `/assets/portraits/${p}.png`);
     });
   }
 
@@ -436,9 +436,11 @@ export class MatchScene extends Phaser.Scene {
     this.playerMap.clear();
 
     const createTeam = (roster: PlayerDefinition[], isHome: boolean) => {
+      console.log(`[Phaser] Creating team ${isHome ? "Home" : "Away"} with ${roster.length} players`);
       let fieldIdx = 0; // index among non-GK players, for Y lane assignment
 
       roster.forEach((p) => {
+        console.log(`[Phaser] Player: ${p.name}, Portrait: ${p.portrait}`);
         const uniqueId = `${isHome ? "home" : "away"}-${p.id}`;
         this.playerDefs.set(uniqueId, p);
 
@@ -474,7 +476,7 @@ export class MatchScene extends Phaser.Scene {
         const glow = this.add.circle(0, 0, 22, teamColor, 0.1);
 
         // Portrait
-        const portrait = this.add.image(0, -2, `portrait-${p.portrait}`).setDisplaySize(36, 36);
+        const portrait = this.add.image(0, -2, p.portrait).setDisplaySize(36, 36);
 
         // Role Badge
         const roleCircle = this.add.circle(14, 14, 8, 0x000000, 1).setStrokeStyle(1, 0xffffff, 0.3);
@@ -618,7 +620,7 @@ export class MatchScene extends Phaser.Scene {
     const createLargeCard = (p: PlayerDefinition, x: number, color: number) => {
       const card    = this.add.container(x, 0);
       const body    = this.add.rectangle(0, 0, 140, 200, 0x1f2937, 1).setStrokeStyle(4, color, 1);
-      const portrait = this.add.image(0, -20, `portrait-${p.portrait}`).setDisplaySize(120, 120);
+      const portrait = this.add.image(0, -20, p.portrait).setDisplaySize(120, 120);
       const name    = this.add.text(0, 70, p.name.toUpperCase(), { fontSize: "16px", color: "#ffffff" }).setOrigin(0.5);
       card.add([body, portrait, name]);
       return card;
