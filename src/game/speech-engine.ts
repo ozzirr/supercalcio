@@ -141,6 +141,36 @@ class SpeechEngine {
     const text = phrases[Math.floor(Math.random() * phrases.length)];
     this.speak(text, 1.15, 1.0, true);
   }
+
+  announceMatchEnd(homeName: string, awayName: string, homeScore: number, awayScore: number) {
+    const isWin = homeScore > awayScore;
+    const isDraw = homeScore === awayScore;
+    
+    let text = "";
+    if (isWin) {
+      const phrases = [
+        `TRIPLICE FISCHIO! Vittoria straordinaria per ${homeName}! Un risultato finale di ${homeScore} a ${awayScore} che premia una prestazione leggendaria!`,
+        `FINISCE QUI! ${homeName} domina e vince ${homeScore} a ${awayScore}. I tifosi sono in estasi per questo trionfo assoluto!`,
+        `GIOOL! Match incredibile, ${homeName} porta a casa i tre punti vincendo per ${homeScore} a ${awayScore}. Una lezione di calcio!`
+      ];
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    } else if (isDraw) {
+      const phrases = [
+        `FINISCE IN PAREGGIO! ${homeScore} a ${awayScore} tra ${homeName} e ${awayName}. Un punto a testa al termine di una battaglia epica!`,
+        `TRIPLICE FISCHIO! Equilibrio perfetto oggi, il match termina ${homeScore} a ${awayScore}. Grande rispetto tra le due formazioni.`
+      ];
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    } else {
+      const phrases = [
+        `TRIPLICE FISCHIO! Sconfitta amara per ${homeName}, ${awayName} vince per ${awayScore} a ${homeScore}. Bisognerà lavorare sodo per rialzarsi!`,
+        `FINISCE QUI! ${awayName} sbanca l'Arena battendo ${homeName} per ${awayScore} a ${homeScore}. Una serata difficile da dimenticare.`,
+        `GIOOL! Cala il sipario, ${homeName} cade sotto i colpi di ${awayName}. Il tabellino dice ${homeScore} a ${awayScore}.`
+      ];
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    }
+
+    this.speak(text, 1.15, 1.0, true);
+  }
 }
 
 export const speechEngine = new SpeechEngine();

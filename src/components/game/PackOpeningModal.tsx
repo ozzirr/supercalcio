@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { PlayerDefinition } from "@/types/player";
 
 interface PackOpeningModalProps {
@@ -10,6 +11,7 @@ interface PackOpeningModalProps {
 }
 
 export function PackOpeningModal({ packType, revealedPlayer, onClose }: PackOpeningModalProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<"opening" | "reveal">("opening");
 
   useEffect(() => {

@@ -211,10 +211,13 @@ export default function ShopPage() {
         revealedPlayer={revealedPlayer}
         onClose={async () => {
           const highlightedPlayerId = revealedPlayer?.id;
-          await syncRoster();
+          // Close immediately for fast UX
           setOpeningPackType(null);
           setRevealedPlayer(null);
+          // Navigate immediately
           router.push(highlightedPlayerId ? `/squad?highlight=${highlightedPlayerId}` : "/squad");
+          // Sync in background
+          await syncRoster();
         }}
       />
     </div>

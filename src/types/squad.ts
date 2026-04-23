@@ -4,6 +4,8 @@ import type { PlayerDefinition } from "./player";
 
 export type Playstyle = "aggressive_press" | "counter_attack" | "possession_control";
 
+export const POSITION_LABELS = ["GK", "DEF", "MID", "ATK", "FLEX"];
+
 export type PlaystyleDefinition = {
   id: Playstyle;
   name: string;

@@ -156,13 +156,19 @@ export default function MatchPage() {
     if (matchTick >= totalTicks && matchInProgress) {
       setTimeout(() => {
         setShowResultOverlay(true);
+        
+        // Trigger final result announcement
+        const homeName = useGameStore.getState().teamName || "GIOOL FC";
+        const awayName = opponentInfo?.name || "CPU";
+        speechEngine.announceMatchEnd(homeName, awayName, matchScore.home, matchScore.away);
+
         setTimeout(async () => {
           await finishMatchAndSave();
           router.push("/results");
-        }, 4000);
+        }, 6000); // Increased time to allow full speech
       }, 1500);
     }
-  }, [matchTick, matchInProgress, finishMatchAndSave, router]);
+  }, [matchTick, matchInProgress, finishMatchAndSave, router, opponentInfo]);
 
   if (!validation.valid) {
     return (
@@ -299,37 +305,54 @@ export default function MatchPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-6"
+            className="fixed inset-0 z-[500] flex items-center justify-center p-6 overflow-hidden"
           >
+            {/* Dynamic Background */}
+            <div className={`absolute inset-0 transition-colors duration-1000 ${
+               matchScore.home > matchScore.away ? "bg-emerald-950/90" : matchScore.home < matchScore.away ? "bg-rose-950/90" : "bg-slate-950/90"
+            } backdrop-blur-3xl`} />
+            
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="max-w-2xl w-full text-center space-y-12"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative z-10 max-w-2xl w-full text-center space-y-12"
             >
               <div className="space-y-4">
                 <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="text-muted text-[10px] font-black uppercase tracking-[0.6em]"
+                  className="inline-block px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-muted text-[10px] font-black uppercase tracking-[0.4em]"
                 >
                   Match Risultato Finale
                 </motion.div>
-                <div className="flex items-center justify-center gap-8 lg:gap-16">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-accent/10 border border-accent/30 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl shadow-accent/20">
+                
+                <div className="flex items-center justify-center gap-8 lg:gap-16 pt-4">
+                  <div className="flex flex-col items-center gap-6">
+                    <motion.div 
+                       whileHover={{ scale: 1.05 }}
+                       className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-accent/10 border-2 border-accent/30 flex items-center justify-center text-5xl lg:text-7xl shadow-[0_0_50px_rgba(251,191,36,0.2)]"
+                    >
                       🛡️
-                    </div>
-                    <div className="text-4xl lg:text-7xl font-black italic text-white tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]">
+                    </motion.div>
+                    <div className="text-5xl lg:text-8xl font-black italic text-white tabular-nums drop-shadow-[0_0_30px_rgba(251,191,36,0.3)]">
                       {matchScore.home}
                     </div>
                   </div>
-                  <div className="text-2xl lg:text-4xl text-muted font-light px-8 border-x border-white/10 italic">VS</div>
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl shadow-rose-500/20">
+
+                  <div className="relative flex flex-col items-center justify-center h-32 lg:h-40">
+                     <div className="absolute inset-y-0 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                     <div className="relative bg-[#05070a] px-4 py-2 text-xl lg:text-3xl text-muted font-black italic tracking-tighter uppercase z-10">VS</div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-6">
+                    <motion.div 
+                       whileHover={{ scale: 1.05 }}
+                       className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-rose-500/10 border-2 border-rose-500/30 flex items-center justify-center text-5xl lg:text-7xl shadow-[0_0_50px_rgba(244,63,94,0.2)]"
+                    >
                       🔴
-                    </div>
-                    <div className="text-4xl lg:text-7xl font-black italic text-rose-500 tabular-nums drop-shadow-[0_0_20px_rgba(244,63,94,0.4)]">
+                    </motion.div>
+                    <div className="text-5xl lg:text-8xl font-black italic text-rose-500 tabular-nums drop-shadow-[0_0_30px_rgba(244,63,94,0.3)]">
                       {matchScore.away}
                     </div>
                   </div>
@@ -338,31 +361,37 @@ export default function MatchPage() {
 
               <div className="space-y-4">
                 <motion.h2 
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  className={`text-5xl lg:text-8xl font-black uppercase italic leading-none tracking-tighter ${
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className={`text-6xl lg:text-9xl font-black uppercase italic leading-none tracking-tighter ${
                     matchScore.home > matchScore.away ? "text-accent" : matchScore.home < matchScore.away ? "text-rose-500" : "text-white"
                   }`}
                 >
-                  {matchScore.home > matchScore.away ? "VICTORIA!" : matchScore.home < matchScore.away ? "DEFEAT" : "DRAW"}
+                  {matchScore.home > matchScore.away ? "VITTORIA!" : matchScore.home < matchScore.away ? "SCONFITTA" : "PAREGGIO"}
                 </motion.h2>
-                <p className="text-muted text-sm lg:text-base font-medium max-w-md mx-auto leading-relaxed">
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-muted/80 text-sm lg:text-lg font-medium max-w-md mx-auto leading-relaxed"
+                >
                   {matchScore.home > matchScore.away 
                     ? "Prestazione leggendaria! Hai dominato tatticamente ogni zona del campo." 
                     : matchScore.home < matchScore.away 
                     ? "Sconfitta amara. Analizza i dati del match e regola la tua strategia." 
                     : "Un pareggio combattuto. Entrambe le squadre hanno mostrato grande carattere."}
-                </p>
+                </motion.p>
               </div>
 
-              <div className="pt-8 flex flex-col items-center gap-6">
-                 <div className="relative">
-                    <div className="w-14 h-14 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+              <div className="pt-12 flex flex-col items-center gap-6">
+                 <div className="relative group">
+                    <div className="absolute inset-0 bg-accent blur-xl opacity-20 animate-pulse" />
+                    <div className="relative flex items-center gap-4 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                       <div className="w-5 h-5 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                       <div className="text-[10px] text-accent font-black uppercase tracking-[0.4em] animate-pulse">Salvataggio Dati Arena...</div>
                     </div>
                  </div>
-                 <div className="text-[10px] text-accent/60 font-black uppercase tracking-[0.4em] animate-pulse">Salvataggio Dati Arena...</div>
               </div>
             </motion.div>
           </motion.div>
