@@ -8,6 +8,8 @@ class SpeechEngine {
   private synth: SpeechSynthesis | null = null;
   private voice: SpeechSynthesisVoice | null = null;
   private enabled = true;
+  private lastSpeechTime = 0;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -36,8 +38,6 @@ class SpeechEngine {
       (maleItalianNames.some(name => v.name.includes(name)) || v.name.toLowerCase().includes("male"))
     ) || voices.find(v => v.lang.startsWith("it")) || voices[0];
   }
-
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
 
   speak(text: string, rate: number = 1.2, pitch: number = 1.0, priority: boolean = false) {
     if (!this.synth || useGameStore.getState().isMuted) return;
