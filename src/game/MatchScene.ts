@@ -3,6 +3,7 @@ import { EventBus } from "./EventBus";
 import { matchAudio } from "./match-audio";
 import type { MatchEvent } from "@/types/match";
 import type { PlayerDefinition } from "@/types/player";
+import { STARTER_PLAYERS } from "@/content/players";
 
 type InitData = {
   homeRoster: PlayerDefinition[];
@@ -85,15 +86,14 @@ export class MatchScene extends Phaser.Scene {
     super("MatchScene");
   }
 
-  preload() {
-    // Standard portraits - we load all since they are light, but we could optimize if needed
-    const portraits = [
-      "aegis", "blaze", "phantom", "volt", "titan", "hawk",
-      "goliath", "viper", "rampart", "oracle", "avalanche", "zenith",
-      "maestro", "chronos", "nova", "mirage", "sniper", "juggernaut", "venom", "apex",
-    ];
-    portraits.forEach(p => this.load.image(`portrait-${p}`, `/portraits/${p}.png`));
 
+
+  preload() {
+    // Dynamic preloading of all defined player portraits
+    const uniquePortraits = Array.from(new Set(STARTER_PLAYERS.map(p => p.portrait)));
+    uniquePortraits.forEach(p => {
+      this.load.image(`portrait-${p}`, `/portraits/${p}.png`);
+    });
   }
 
   private getScreenX(wx: number, wy: number) {
