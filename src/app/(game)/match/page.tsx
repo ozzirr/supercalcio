@@ -7,11 +7,15 @@ import { validateSquad } from "@/types/squad";
 import { MatchEngine } from "@/engine/match-engine";
 import { generateSeed } from "@/engine/random";
 import { formatMatchEvent, tickToMatchTime } from "@/utils/formatting";
-import type { MatchEvent } from "@/types/match";
 import { STARTER_PLAYERS } from "@/content/players";
 import { useRouter } from "next/navigation";
 import { EventBus } from "@/game/EventBus";
+import { matchAudio } from "@/game/match-audio";
 import { supabase } from "@/lib/supabase/client";
+import { MatchHeader } from "@/components/match/MatchHeader";
+import { MatchChronicle } from "@/components/match/MatchChronicle";
+import { TacticalPanel } from "@/components/match/TacticalPanel";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function MatchPage() {
   const router = useRouter();
@@ -19,12 +23,11 @@ export default function MatchPage() {
   // Store connection
   const { 
     lineup, availablePlayers, playstyle, stance, command, 
-    setStance, setCommand, addRewards, ownedPlayers,
+    setStance, setCommand, ownedPlayers,
     ultimateReady, setUltimateReady, activateUltimate,
-    isMuted, setMuted,
     matchInProgress, matchTick, matchScore, matchEvents,
     startGlobalMatch, finishMatchAndSave, opponentInfo,
-    equippedStadium, purchasedItems
+    equippedStadium
   } = useGameStore();
 
   const validation = validateSquad(lineup, availablePlayers);
@@ -39,7 +42,6 @@ export default function MatchPage() {
 
   // Setup match IF NOT IN PROGRESS
   useEffect(() => {
-    // GUARD: Don't start if already in progress or IF JUST FINISHED (prevents auto-restart loop)
     const { matchFinished } = useGameStore.getState();
     
     if (!validation.valid || matchInProgress || matchInitializedRef.current || matchFinished) {
@@ -54,7 +56,6 @@ export default function MatchPage() {
 
       const { data: userAuth } = await supabase.auth.getUser();
       
-      // 1. Fetch random opponent squad
       const { data: squads } = await supabase
         .from('squads')
         .select('*, profiles(username, team_name, badge_id)')
@@ -70,7 +71,6 @@ export default function MatchPage() {
         const basePlayer = availablePlayers.find(p => p.id === l.playerId)!;
         const userPlayer = ownedPlayers.find(p => p.player_id === l.playerId);
         
-        // Apply individual bonuses
         let boosted = { ...basePlayer };
         if (userPlayer && userPlayer.stats_bonus) {
           boosted.stats = {
@@ -82,16 +82,6 @@ export default function MatchPage() {
             goalkeeping: boosted.stats.goalkeeping + (userPlayer.stats_bonus.goalkeeping || 0),
           };
         }
-
-        // Apply GLOBAL SHOP UPGRADES
-        const hasSpeedBoost = purchasedItems.includes("upgrade_pac");
-        const hasSniperBoost = purchasedItems.includes("upgrade_sho");
-        const hasIronWallBoost = purchasedItems.includes("upgrade_def");
-
-        if (hasSpeedBoost) boosted.stats.pace += 5;
-        if (hasSniperBoost && boosted.roleTags.includes("attacker")) boosted.stats.shooting += 5;
-        if (hasIronWallBoost && boosted.roleTags.includes("defender")) boosted.stats.defense += 5;
-
         return boosted;
       });
 
@@ -127,10 +117,8 @@ export default function MatchPage() {
         awayRoster
       );
 
-      // Start Globale
       startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
 
-      // Init Phaser (it stays in layout)
       setTimeout(() => {
         EventBus.emit("init-match", {
           homeRoster,
@@ -158,7 +146,6 @@ export default function MatchPage() {
     };
   }, [setUltimateReady]);
 
-  // Handle Match Finish
   useEffect(() => {
     if (matchTick >= totalTicks && matchInProgress) {
       setTimeout(() => {
@@ -171,22 +158,24 @@ export default function MatchPage() {
     }
   }, [matchTick, matchInProgress, finishMatchAndSave, router]);
 
-  // Auto-scroll feed
-  const feedEndRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [matchEvents]);
-
   if (!validation.valid) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="card p-8 text-center space-y-4 max-w-md">
-          <h2 className="text-xl font-bold">Squadra Non Pronta</h2>
-          <p className="text-muted">Hai bisogno di una formazione valida di 5 giocatori prima di iniziare una partita.</p>
-          <Link href="/squad" className="btn-primary inline-block">
-            Vai alla Formazione
+      <div className="flex-1 flex items-center justify-center bg-[#05070a]">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="card p-10 text-center space-y-6 max-w-md border-accent/20 bg-accent/5 backdrop-blur-xl"
+        >
+          <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-accent/30">
+            <span className="text-4xl">⚽</span>
+          </div>
+          <h2 className="text-2xl font-black italic uppercase tracking-wider text-white">Squadra Non Pronta</h2>
+          <p className="text-muted text-sm leading-relaxed">Hai bisogno di una formazione completa di 5 titolari prima di scendere in campo nell'Arena.</p>
+          <Link href="/squad" className="btn-primary w-full py-4 rounded-2xl flex items-center justify-center gap-2 group">
+            Gestisci Formazione
+            <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -196,248 +185,183 @@ export default function MatchPage() {
     useGameStore.getState().matchEngine?.intervene("home", { type: "stance_change", stance: s });
   };
 
-  const currentStance = stance;
-  const currentCommand = command;
-  const progress = (matchTick / totalTicks) * 100;
-
   return (
-    <div className="fixed inset-0 top-[57px] flex flex-col lg:flex-row overflow-hidden bg-surface">
-      {/* 1. ARENA SECTION */}
-      <div className="flex-1 flex flex-col bg-[#05070e] relative overflow-hidden min-h-0 lg:border-r border-border">
-        {/* Progress bar */}
-        <div className="h-1 w-full bg-white/5 absolute top-0 left-0 z-20">
-          <div
-            className="h-full bg-accent transition-all duration-500"
-            style={{ width: `${progress}%`, boxShadow: "0 0 15px #fbbf24" }}
-          />
-        </div>
+    <div className="fixed inset-0 top-[57px] flex flex-col lg:flex-row overflow-hidden bg-[#05070a]">
+      {/* 1. ARENA VIEWPORT */}
+      <div className="flex-1 relative flex flex-col overflow-hidden">
+        
+        {/* Broadcast HUD Layer */}
+        <MatchHeader 
+          tick={matchTick}
+          totalTicks={totalTicks}
+          score={matchScore}
+          opponentName={opponentInfo?.name || "CPU"}
+          opponentPlaystyle={opponentInfo?.playstyle || "Standard"}
+          isSearching={isSearching}
+          matchInProgress={matchInProgress}
+        />
 
-        {/* Scoreboard HUD */}
-        <div className="relative z-10 px-4 lg:px-6 py-4 lg:py-6" style={{background: 'linear-gradient(180deg, rgba(5,7,14,0.95) 0%, transparent 100%)'}}>
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            {/* Home Team */}
-            <div className="flex flex-col items-center lg:items-start gap-1 lg:gap-2">
-              <div className="text-[8px] lg:text-[10px] text-accent/70 uppercase tracking-[0.2em] font-black">Tu</div>
-              <div className="text-2xl lg:text-5xl font-black tabular-nums text-white italic leading-none drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
-                {matchScore.home}
-              </div>
-              <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{playstyle.replace(/_/g, " ")}</div>
-            </div>
-
-            {/* Match Status / Time */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="bg-white/5 border border-white/10 px-3 py-1 rounded-full mb-2">
-                 <div className="text-xs lg:text-base font-black text-foreground/80 font-mono tabular-nums leading-none">
-                  {tickToMatchTime(matchTick, totalTicks)}
-                 </div>
-              </div>
-              {isSearching && (
-                <div className="text-[8px] text-accent animate-pulse font-black uppercase tracking-widest">Analisi avversario...</div>
-              )}
-              {!isSearching && matchInProgress && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-                  <span className="text-[8px] text-muted uppercase tracking-widest font-black">Live Match</span>
+        {/* Phase / Momentum Indicator (Floating) */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+          <AnimatePresence mode="wait">
+            {matchInProgress && (
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                className="px-6 py-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center gap-4 shadow-2xl"
+              >
+                <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+                  <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em]">Momentum</span>
+                  <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden flex">
+                    <div className="h-full bg-accent shadow-[0_0_8px_#fbbf24]" style={{ width: '65%' }} />
+                    <div className="h-full bg-rose-500 opacity-30" style={{ width: '35%' }} />
+                  </div>
                 </div>
-              )}
-              {!matchInProgress && matchTick >= totalTicks && (
-                <div className="text-[8px] text-muted uppercase tracking-widest font-black">Fischio Finale</div>
-              )}
-            </div>
-
-            {/* Audio Toggle */}
-            <div className="absolute top-6 right-4 lg:right-6 flex items-center gap-2">
-               <button 
-                onClick={() => setMuted(!isMuted)}
-                className="p-2 rounded-full bg-white/5 border border-white/10 text-muted hover:text-white transition-all shadow-lg"
-               >
-                 {isMuted ? (
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M168,128a12,12,0,0,1-12,12H100a12,12,0,0,1,0-24h56A12,12,0,0,1,168,128Zm70.49,102.51a12,12,0,0,1-17,17l-192-192a12,12,0,0,1,17-17l36.56,36.56A27.84,27.84,0,0,1,104,70.52V40a12,12,0,0,1,19.34-9.6l24,18H152a12,12,0,0,1,0,24h-1.33l19.5,14.62,11.83,11.83h0l56.49,56.5ZM104,116.52l12.56,12.56-11.41,8.56A12,12,0,0,1,84.7,128V70.52a4,4,0,0,1,1.15-2.82Zm120,11.48H200a12,12,0,0,1,0-24h24a12,12,0,0,1,0,24Zm-24-36a12,12,0,0,1-12-12v-8a12,12,0,0,1,24,0v8A12,12,0,0,1,200,92Zm0,72a12,12,0,0,1-12-12v-16a12,12,0,0,1,24,0v16A12,12,0,0,1,200,164Z"></path></svg>
-                 ) : (
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M152,72h-4.3l-24.36-18.27A12,12,0,0,0,104,50.14V40a12,12,0,0,0-19.34-9.6L37.2,66.1a11.9,11.9,0,0,0-5.2,9.9V180a12,12,0,0,0,19.34,9.6L104,150.14v39.38a12,12,0,0,0,19.34,9.6L147.7,180.85A12,12,0,0,0,155,171.21V81.64A12,12,0,0,0,147.7,72ZM84,151a12,12,0,0,0-4.66,0.94L52,170.83V81.3l27.34,20.5a12,12,0,0,0,19.34-9.6V71.4l5.32,4V184.6ZM200,104a12,12,0,0,0-12,12v24a12,12,0,0,0,24,0V116A12,12,0,0,0,200,104Zm40,0a12,12,0,0,0-12,12v24a12,12,0,0,0,24,0V116A12,12,0,0,0,240,104Z"></path></svg>
-                 )}
-               </button>
-            </div>
-
-            {/* Away Team */}
-            <div className="flex flex-col items-center lg:items-end gap-1 lg:gap-2">
-              <div className="text-[8px] lg:text-[10px] text-rose-400/70 uppercase tracking-[0.2em] font-black text-right">
-                {opponentInfo?.name || "CPU"}
-              </div>
-              <div className="text-2xl lg:text-5xl font-black tabular-nums text-rose-500 italic leading-none drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]">
-                {matchScore.away}
-              </div>
-              <div className="hidden lg:block text-[9px] font-black uppercase tracking-widest text-muted truncate max-w-[100px]">{opponentInfo?.playstyle || "Standard"}</div>
-            </div>
-          </div>
+                <div className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">
+                  Possesso: <span className="text-accent">62%</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Empty placeholder - PhaserGame is in the overlay */}
-        <div className="flex-1 relative overflow-hidden h-[35vh] lg:h-auto border-y border-white/5 lg:border-none">
+        {/* The Phaser Instance Placeholder */}
+        {/* Phaser is rendered by MatchOverlay in a layer above this, but we keep the space */}
+        <div className="flex-1 bg-gradient-to-b from-[#0a162d] to-[#05070a]">
+           {/* This background is visible before Phaser loads */}
+           {isSearching && (
+             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
+                <p className="text-xs text-accent font-black uppercase tracking-[0.3em] animate-pulse">Sincronizzazione Arena...</p>
+             </div>
+           )}
         </div>
       </div>
 
-      {/* 2. CONTROLS & FEED SECTION */}
-      <div className="w-full lg:w-96 flex flex-col bg-surface overflow-hidden h-[40vh] lg:h-full">
-        <div className="flex lg:hidden border-b border-border bg-black/20">
+      {/* 2. SIDEBAR SECTION (FEED & TACTICS) */}
+      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[45vh] lg:h-full border-l border-white/5">
+        {/* Mobile Tab Switcher */}
+        <div className="flex lg:hidden border-b border-white/5">
           <button 
             onClick={() => setActiveTab("feed")}
             className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
-              activeTab === "feed" ? "text-accent border-b-2 border-accent bg-accent/5" : "text-muted"
+              activeTab === "feed" ? "text-accent bg-accent/5 border-b-2 border-accent" : "text-muted"
             }`}
           >
-            Chronicle
+            Feed
           </button>
           <button 
             onClick={() => setActiveTab("tactics")}
             className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
-              activeTab === "tactics" ? "text-accent border-b-2 border-accent bg-accent/5" : "text-muted"
+              activeTab === "tactics" ? "text-accent bg-accent/5 border-b-2 border-accent" : "text-muted"
             }`}
           >
-            Tactical Deck
+            Tactics
           </button>
         </div>
 
+        {/* Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className={`flex-1 flex flex-col min-h-0 ${activeTab === "tactics" ? "hidden lg:flex" : "flex"}`}>
-            <div className="hidden lg:flex p-4 border-b border-border bg-black/10">
-              <span className="text-[10px] text-muted uppercase tracking-widest font-black">LIVE CHRONICLE</span>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 font-mono text-[10px] lg:text-xs bg-black/10">
-              {matchEvents.length === 0 && (
-                <div className="text-center text-muted/30 italic py-12 flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-dashed border-white/10 animate-spin" />
-                  {isSearching ? "Analisi avversario..." : "Waiting for kick-off..."}
-                </div>
-              )}
-              {matchEvents.map((e, idx) => {
-                const isGoal = e.type === "goal";
-                const isBreak = e.type === "halftime" || e.type === "full_time";
-                return (
-                  <div
-                    key={`${e.tick}-${idx}`}
-                    className={`flex gap-3 items-start rounded-xl px-3 py-2.5 transition-all text-xs lg:text-sm animate-in fade-in slide-in-from-left-2 ${
-                      isGoal
-                        ? "bg-accent/15 border border-accent/30 text-accent font-black italic shadow-lg shadow-accent/5"
-                        : isBreak
-                        ? "bg-white/10 border border-white/10 text-white font-black justify-center text-center italic"
-                        : "text-foreground/70 bg-white/5 border border-white/5"
-                    }`}
-                  >
-                    {!isBreak && (
-                      <span className="text-accent/60 shrink-0 tabular-nums font-black">
-                        {tickToMatchTime(e.tick, totalTicks)}
-                      </span>
-                    )}
-                    <span className="leading-tight">{formatMatchEvent(e, STARTER_PLAYERS)}</span>
-                  </div>
-                );
-              })}
-              <div ref={feedEndRef} />
-            </div>
+            <MatchChronicle 
+              events={matchEvents}
+              totalTicks={totalTicks}
+              isSearching={isSearching}
+            />
           </div>
 
-          <div className={`shrink-0 p-4 lg:p-6 space-y-6 lg:space-y-8 bg-surface border-t border-border shadow-2xl z-20 ${
-              activeTab === "feed" ? "hidden lg:block" : "block"
-            }`}>
-            <div className="space-y-4">
-              <div>
-                <div className="text-[9px] text-muted uppercase tracking-[0.3em] font-black mb-3 ml-1">Team Stance</div>
-                <div className="flex gap-2">
-                  {(["balanced", "aggressive", "defensive"] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleStanceChange(s)}
-                      disabled={!matchInProgress}
-                      className={`flex-1 py-3 lg:py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                        stance === s
-                          ? "bg-accent text-black border-accent shadow-xl shadow-accent/10"
-                          : "bg-white/5 text-muted border-white/5 hover:bg-white/10 hover:text-foreground disabled:opacity-20"
-                      }`}
-                    >
-                      {s === "balanced" ? "Bal" : s === "aggressive" ? "Atk" : "Def"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[9px] text-muted uppercase tracking-[0.3em] font-black mb-3 ml-1">Tactical Command</div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                  {(["none", "focus_attack", "protect_lead"] as const).map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setCommand(c)}
-                      disabled={!matchInProgress}
-                      className={`py-3 lg:py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                        command === c
-                          ? "bg-accent/20 text-accent border-accent/40 shadow-lg"
-                          : "bg-white/5 text-muted border-white/5 hover:bg-white/10 hover:text-foreground disabled:opacity-20"
-                      } ${c === "none" && "col-span-2 lg:col-span-1"}`}
-                    >
-                      {c === "none" ? "None" : c === "focus_attack" ? "Assalto" : "Blindata"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button 
-                onClick={() => ultimateReady && activateUltimate()}
-                disabled={!matchInProgress || !ultimateReady}
-                className={`w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] transition-all relative overflow-hidden border ${
-                  ultimateReady 
-                    ? "bg-accent text-black border-accent animate-pulse shadow-[0_0_20px_rgba(251,191,36,0.3)] cursor-pointer" 
-                    : "bg-white/5 text-muted/30 border-dashed border-border cursor-not-allowed"
-                }`}
-              >
-                <div 
-                  className="absolute inset-0 bg-accent/10 transition-all duration-500"
-                  style={{ width: `${ultimateCharge}%` }}
-                />
-                <span className="relative z-10">
-                  {ultimateReady ? "⚡ ACTIVATE ULTIMATE" : `⚡ Ultimate Charge: ${ultimateCharge}%`}
-                </span>
-              </button>
-            </div>
+          <div className={`${activeTab === "feed" ? "hidden lg:block" : "block"}`}>
+            <TacticalPanel 
+              stance={stance}
+              command={command}
+              ultimateReady={ultimateReady}
+              ultimateCharge={ultimateCharge}
+              matchInProgress={matchInProgress}
+              onStanceChange={handleStanceChange}
+              onCommandChange={setCommand}
+              onActivateUltimate={activateUltimate}
+            />
           </div>
         </div>
       </div>
 
-      {/* Result Overlay */}
-      {showResultOverlay && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in duration-700">
-          <div className="max-w-md w-full text-center space-y-8 animate-in zoom-in-95 duration-500">
-            <div>
-              <div className="text-muted text-xs font-black uppercase tracking-[0.4em] mb-4">Final Score</div>
-              <div className="flex items-center justify-center gap-8 lg:gap-12">
-                <div className="text-5xl lg:text-7xl font-black italic text-accent">{matchScore.home}</div>
-                <div className="text-2xl lg:text-3xl text-muted font-light px-4 border-x border-white/10">VS</div>
-                <div className="text-5xl lg:text-7xl font-black italic text-rose-500">{matchScore.away}</div>
+      {/* 3. RESULT OVERLAY */}
+      <AnimatePresence>
+        {showResultOverlay && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="max-w-2xl w-full text-center space-y-12"
+            >
+              <div className="space-y-4">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-muted text-[10px] font-black uppercase tracking-[0.6em]"
+                >
+                  Match Risultato Finale
+                </motion.div>
+                <div className="flex items-center justify-center gap-8 lg:gap-16">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-accent/10 border border-accent/30 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl shadow-accent/20">
+                      🛡️
+                    </div>
+                    <div className="text-4xl lg:text-7xl font-black italic text-white tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]">
+                      {matchScore.home}
+                    </div>
+                  </div>
+                  <div className="text-2xl lg:text-4xl text-muted font-light px-8 border-x border-white/10 italic">VS</div>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl shadow-rose-500/20">
+                      🔴
+                    </div>
+                    <div className="text-4xl lg:text-7xl font-black italic text-rose-500 tabular-nums drop-shadow-[0_0_20px_rgba(244,63,94,0.4)]">
+                      {matchScore.away}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <h2 className={`text-4xl lg:text-6xl font-black uppercase italic leading-none ${
-                matchScore.home > matchScore.away ? "text-accent animate-pulse" : matchScore.home < matchScore.away ? "text-rose-500" : "text-white"
-              }`}>
-                {matchScore.home > matchScore.away ? "Vittoria!" : matchScore.home < matchScore.away ? "Sconfitta" : "Pareggio"}
-              </h2>
-              <p className="text-muted text-xs lg:text-sm font-medium tracking-wide">
-                {matchScore.home > matchScore.away 
-                  ? "Ottima prestazione! Il tuo team ha dominato il campo." 
-                  : matchScore.home < matchScore.away 
-                  ? "Non scoraggiarti. Analizza la tattica e riprova!" 
-                  : "Un match equilibrato fino all'ultimo secondo."}
-              </p>
-            </div>
+              <div className="space-y-4">
+                <motion.h2 
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className={`text-5xl lg:text-8xl font-black uppercase italic leading-none tracking-tighter ${
+                    matchScore.home > matchScore.away ? "text-accent" : matchScore.home < matchScore.away ? "text-rose-500" : "text-white"
+                  }`}
+                >
+                  {matchScore.home > matchScore.away ? "VICTORIA!" : matchScore.home < matchScore.away ? "DEFEAT" : "DRAW"}
+                </motion.h2>
+                <p className="text-muted text-sm lg:text-base font-medium max-w-md mx-auto leading-relaxed">
+                  {matchScore.home > matchScore.away 
+                    ? "Prestazione leggendaria! Hai dominato tatticamente ogni zona del campo." 
+                    : matchScore.home < matchScore.away 
+                    ? "Sconfitta amara. Analizza i dati del match e regola la tua strategia." 
+                    : "Un pareggio combattuto. Entrambe le squadre hanno mostrato grande carattere."}
+                </p>
+              </div>
 
-            <div className="pt-8 flex flex-col items-center gap-4">
-               <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-               <div className="text-[10px] text-muted uppercase tracking-[0.3em] font-black">Salvataggio dati in corso...</div>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="pt-8 flex flex-col items-center gap-6">
+                 <div className="relative">
+                    <div className="w-14 h-14 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+                    </div>
+                 </div>
+                 <div className="text-[10px] text-accent/60 font-black uppercase tracking-[0.4em] animate-pulse">Salvataggio Dati Arena...</div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

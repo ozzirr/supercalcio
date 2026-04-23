@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { EventBus } from "./EventBus";
+import { matchAudio } from "./match-audio";
 import type { MatchEvent } from "@/types/match";
 import type { PlayerDefinition } from "@/types/player";
 
@@ -93,12 +94,6 @@ export class MatchScene extends Phaser.Scene {
     ];
     portraits.forEach(p => this.load.image(`portrait-${p}`, `/portraits/${p}.png`));
 
-    // Audio assets
-    this.load.audio("whistle", "/audio/match/whistle.mp3");
-    this.load.audio("goal",    "/audio/match/goal.mp3");
-    this.load.audio("save",    "/audio/match/save.mp3");
-    this.load.audio("ambient", "/audio/match/crowd.mp3");
-    this.load.audio("music",   "/audio/match/theme.mp3");
   }
 
   private getScreenX(wx: number, wy: number) {
@@ -121,10 +116,9 @@ export class MatchScene extends Phaser.Scene {
     this.drawPitch();
     this.createBall();
 
-    try {
-      this.sound.play("ambient", { volume: 0.04, loop: true });
-      this.sound.play("music",   { volume: 0.07, loop: true });
-    } catch (e) {}
+    this.input.on("pointerdown", () => {
+      matchAudio.unlock();
+    });
 
     this.initMatchHandler    = (data: InitData) => this.onInitMatch(data);
     this.matchEventHandler   = (event: MatchEvent) => this.onMatchEvent(event);
@@ -299,25 +293,28 @@ export class MatchScene extends Phaser.Scene {
     // Theme Configs
     const themes: Record<string, any> = {
       stadium_default: {
-        bg: [0x060c1a, 0x060c1a, 0x0a162d, 0x0a162d],
-        grass1: 0x0e1c3a,
-        grass2: 0x0a162d,
+        bg: [0x05070a, 0x05070a, 0x0a162d, 0x0a162d],
+        grass1: 0x111e3a,
+        grass2: 0x0d162d,
         lines: 0x3b82f6,
-        goals: 0x60a5fa
+        goals: 0x60a5fa,
+        glow: 0x1d4ed8
       },
       stadium_neon: {
-        bg: [0x0f0b1e, 0x0f0b1e, 0x1a0b2e, 0x1a0b2e],
-        grass1: 0x221144,
-        grass2: 0x1a0b2e,
-        lines: 0x8b5cf6, // Purple neon
-        goals: 0xd8b4fe
+        bg: [0x080510, 0x080510, 0x1a0b2e, 0x1a0b2e],
+        grass1: 0x1e113a,
+        grass2: 0x150b24,
+        lines: 0x8b5cf6,
+        goals: 0xd8b4fe,
+        glow: 0x6d28d9
       },
       stadium_retro: {
-        bg: [0x14532d, 0x14532d, 0x166534, 0x166534], // Darkest green
-        grass1: 0x15803d, // Mid green
-        grass2: 0x166534, // Dark green
-        lines: 0xfacc15, // Retro yellow lines
-        goals: 0xfef08a
+        bg: [0x061a0d, 0x061a0d, 0x0a2d16, 0x0a2d16],
+        grass1: 0x113a1e,
+        grass2: 0x0d2d16,
+        lines: 0xfacc15,
+        goals: 0xfef08a,
+        glow: 0xca8a04
       }
     };
 
@@ -327,82 +324,96 @@ export class MatchScene extends Phaser.Scene {
     else this.pitchGraphics = this.add.graphics();
     
     const g = this.pitchGraphics;
+    
+    // 1. Draw Background
     g.fillGradientStyle(t.bg[0], t.bg[1], t.bg[2], t.bg[3], 1);
     g.fillRect(0, 0, screenW, screenH);
 
     const getX = (wx: number, wy: number) => this.getScreenX(wx, wy);
     const getY = (wy: number) => this.getScreenY(wy);
 
-    // Dynamic grid/stripes based on theme
-    if (stadium === "stadium_retro") {
-      // Checkerboard for retro
-      const cols = 12;
-      const rows = 8;
-      const w = LOGIC_W / cols;
-      const h = LOGIC_H / rows;
-      for (let x = 0; x < cols; x++) {
-        for (let y = 0; y < rows; y++) {
-          if ((x + y) % 2 === 0) {
-            g.fillStyle(t.grass1, 0.4);
-            const xS = x * w, xE = (x+1) * w;
-            const yS = y * h, yE = (y+1) * h;
-            const points = [
-              new Phaser.Math.Vector2(getX(xS, yS), getY(yS)),
-              new Phaser.Math.Vector2(getX(xE, yS), getY(yS)),
-              new Phaser.Math.Vector2(getX(xE, yE), getY(yE)),
-              new Phaser.Math.Vector2(getX(xS, yE), getY(yE)),
-            ];
-            g.fillPoints(points, true);
-          }
-        }
-      }
-    } else {
-      // Classic horizontal stripes for others
-      for (let i = 0; i < 10; i++) {
-        g.fillStyle(i % 2 === 0 ? t.grass1 : t.grass2, 0.4);
-        const yS = i * (LOGIC_H / 10), yE = (i + 1) * (LOGIC_H / 10);
-        const points = [
-          new Phaser.Math.Vector2(getX(0, yS),       getY(yS)),
-          new Phaser.Math.Vector2(getX(LOGIC_W, yS), getY(yS)),
-          new Phaser.Math.Vector2(getX(LOGIC_W, yE), getY(yE)),
-          new Phaser.Math.Vector2(getX(0, yE),       getY(yE)),
-        ];
-        g.fillPoints(points, true);
-      }
+    // 2. Draw Pitch Surface (Perspective Corrected)
+    const drawSurface = (x1: number, y1: number, x2: number, y2: number, color: number, alpha: number) => {
+      g.fillStyle(color, alpha);
+      const points = [
+        new Phaser.Math.Vector2(getX(x1, y1), getY(y1)),
+        new Phaser.Math.Vector2(getX(x2, y1), getY(y1)),
+        new Phaser.Math.Vector2(getX(x2, y2), getY(y2)),
+        new Phaser.Math.Vector2(getX(x1, y2), getY(y2)),
+      ];
+      g.fillPoints(points, true);
+    };
+
+    // Stripes
+    const stripeCount = 12;
+    for (let i = 0; i < stripeCount; i++) {
+      const yS = (i * LOGIC_H) / stripeCount;
+      const yE = ((i + 1) * LOGIC_H) / stripeCount;
+      drawSurface(0, yS, LOGIC_W, yE, i % 2 === 0 ? t.grass1 : t.grass2, 0.4);
     }
 
-    // Lines
-    g.lineStyle(2, t.lines, stadium === "stadium_neon" ? 0.6 : 0.3);
+    // 3. Draw Tactical Zones (Subtle Overlay)
+    g.fillStyle(t.glow, 0.05);
+    // Home defensive zone
+    drawSurface(20, 20, 200, LOGIC_H - 20, t.glow, 0.03);
+    // Away defensive zone
+    drawSurface(LOGIC_W - 200, 20, LOGIC_W - 20, LOGIC_H - 20, t.glow, 0.03);
+
+    // 4. Draw Lines with subtle outer glow
+    const lineAlpha = stadium === "stadium_neon" ? 0.8 : 0.4;
+    g.lineStyle(2, t.lines, lineAlpha);
+    
+    // Pitch Border
     const borderPoints = [
-      new Phaser.Math.Vector2(getX(20, 20),              getY(20)),
-      new Phaser.Math.Vector2(getX(LOGIC_W - 20, 20),    getY(20)),
+      new Phaser.Math.Vector2(getX(20, 20), getY(20)),
+      new Phaser.Math.Vector2(getX(LOGIC_W - 20, 20), getY(20)),
       new Phaser.Math.Vector2(getX(LOGIC_W - 20, LOGIC_H - 20), getY(LOGIC_H - 20)),
-      new Phaser.Math.Vector2(getX(20, LOGIC_H - 20),    getY(LOGIC_H - 20)),
+      new Phaser.Math.Vector2(getX(20, LOGIC_H - 20), getY(LOGIC_H - 20)),
     ];
     g.strokePoints(borderPoints, true);
 
+    // Midfield Line
     g.lineBetween(getX(LOGIC_W / 2, 20), getY(20), getX(LOGIC_W / 2, LOGIC_H - 20), getY(LOGIC_H - 20));
 
+    // Center Circle
     g.beginPath();
-    const circleRes = stadium === "stadium_retro" ? 0.4 : 0.2;
-    for (let a = 0; a <= Math.PI * 2; a += circleRes) {
-      const px = getX(LOGIC_W / 2 + Math.cos(a) * 120, LOGIC_H / 2 + Math.sin(a) * 80);
-      const py = getY(LOGIC_H / 2 + Math.sin(a) * 80);
+    const circleRes = 0.1;
+    for (let a = 0; a <= Math.PI * 2 + 0.1; a += circleRes) {
+      const px = getX(LOGIC_W / 2 + Math.cos(a) * 100, LOGIC_H / 2 + Math.sin(a) * 70);
+      const py = getY(LOGIC_H / 2 + Math.sin(a) * 70);
       if (a === 0) g.moveTo(px, py); else g.lineTo(px, py);
     }
     g.strokePath();
 
-    // Neon glow effect if applicable
-    if (stadium === "stadium_neon") {
-       g.lineStyle(4, t.lines, 0.2);
-       g.strokePath();
-    }
+    // Penalty Areas
+    const drawBox = (x: number, w: number, h: number) => {
+      const yS = (LOGIC_H - h) / 2;
+      const yE = yS + h;
+      g.beginPath();
+      g.moveTo(getX(x, yS), getY(yS));
+      g.lineTo(getX(x + w, yS), getY(yS));
+      g.lineTo(getX(x + w, yE), getY(yE));
+      g.lineTo(getX(x, yE), getY(yE));
+      g.strokePath();
+    };
 
-    // Goals
-    g.lineStyle(6, t.goals, 0.8);
+    drawBox(20, 140, 360); // Home Box
+    drawBox(LOGIC_W - 160, 140, 360); // Away Box
+
+    // 5. Goals (3D-ish)
+    g.lineStyle(4, 0xffffff, 0.8);
     const goalY1 = LOGIC_H / 2 - 80, goalY2 = LOGIC_H / 2 + 80;
-    g.lineBetween(getX(20, goalY1),          getY(goalY1), getX(20, goalY2),          getY(goalY2));
-    g.lineBetween(getX(LOGIC_W - 20, goalY1), getY(goalY1), getX(LOGIC_W - 20, goalY2), getY(goalY2));
+    const goalDepth = 30;
+    
+    // Left Goal
+    g.lineBetween(getX(20, goalY1), getY(goalY1), getX(20 - goalDepth, goalY1), getY(goalY1));
+    g.lineBetween(getX(20, goalY2), getY(goalY2), getX(20 - goalDepth, goalY2), getY(goalY2));
+    g.lineBetween(getX(20 - goalDepth, goalY1), getY(goalY1), getX(20 - goalDepth, goalY2), getY(goalY2));
+    
+    // Right Goal
+    g.lineBetween(getX(LOGIC_W - 20, goalY1), getY(goalY1), getX(LOGIC_W - 20 + goalDepth, goalY1), getY(goalY1));
+    g.lineBetween(getX(LOGIC_W - 20, goalY2), getY(goalY2), getX(LOGIC_W - 20 + goalDepth, goalY2), getY(goalY2));
+    g.lineBetween(getX(LOGIC_W - 20 + goalDepth, goalY1), getY(goalY1), getX(LOGIC_W - 20 + goalDepth, goalY2), getY(goalY2));
 
     g.setDepth(0);
   }
@@ -449,53 +460,36 @@ export class MatchScene extends Phaser.Scene {
         // Small constant per-player X bias so same-role players don't stack
         const personalBias = ((fieldIdx % 2 === 0) ? 1 : -1) * (12 + Math.random() * 18);
 
-        const container  = this.add.container(this.getScreenX(wx, wy), this.getScreenY(wy));
-        const tierColor  = ({ bronze: 0xcd7f32, silver: 0xc0c0c0, gold: 0xffd700, legendary: 0xa855f7 } as any)[p.tier] ?? 0xffffff;
-
-        const shadow     = this.add.ellipse(0, 35, 40, 15, 0x000000, 0.4);
-        const cardWidth  = 50, cardHeight = 70;
+        const container = this.add.container(this.getScreenX(wx, wy), this.getScreenY(wy));
         
-        // KIT COLORS
-        let cardBg = 0x111827;
-        let cardStroke = isHome ? 0x6366f1 : 0xf43f5e;
+        // --- NEW REALISTIC PLAYER MARKER DESIGN ---
+        const teamColor = isHome ? 0x6366f1 : 0xf43f5e;
+        const shadow = this.add.ellipse(0, 5, 45, 20, 0x000000, 0.3);
         
-        if (isHome) {
-          if (this.equippedKit === "kit_black") {
-            cardBg = 0x0a0a0a;
-            cardStroke = 0xfbbf24; // Gold details
-          } else if (this.equippedKit === "kit_red") {
-            cardBg = 0x991b1b;
-            cardStroke = 0xffffff;
-          } else if (this.equippedKit === "kit_gold") {
-            cardBg = 0xca8a04;
-            cardStroke = 0xffffff;
-          }
-        }
-
-        const card       = this.add.rectangle(0, 0, cardWidth, cardHeight, cardBg, 0.95)
-                             .setStrokeStyle(2.5, cardStroke, 1);
-        const portrait   = this.add.image(0, -10, `portrait-${p.portrait}`).setDisplaySize(42, 42);
-
-        const roleLabel  = role;
-        const roleBg     = this.add.circle(-cardWidth / 2 + 10, -cardHeight / 2 + 10, 8, 0x1f2937, 1)
-                             .setStrokeStyle(1, 0xffffff, 0.3);
-        const roleText   = this.add.text(-cardWidth / 2 + 10, -cardHeight / 2 + 10, roleLabel,
-                             { fontSize: "7px", fontStyle: "bold", color: "#ffffff" }).setOrigin(0.5);
-
-        const nameLabelBg = this.add.rectangle(0, 25, cardWidth - 10, 12, 0x000000, 0.6);
-        const nameText    = this.add.text(0, 25, p.name.split(" ")[0],
-                             { fontSize: "8px", color: "#ffffff" }).setOrigin(0.5);
+        // Base Circle (Glassmorphism look)
+        const base = this.add.circle(0, 0, 24, 0x111827, 0.8)
+                          .setStrokeStyle(2, teamColor, 1);
         
-        // BADGE / INDICATOR
-        const badgeTag = isHome ? this.getBadgeEmoji(this.badgeId) : "🔴";
-        const indicator = this.add.text(cardWidth / 2 - 8, -cardHeight / 2 + 8, badgeTag, 
-                            { fontSize: "10px" }).setOrigin(0.5);
+        // Inner Glow
+        const glow = this.add.circle(0, 0, 22, teamColor, 0.1);
 
-        container.add([shadow, card, portrait, roleBg, roleText, nameLabelBg, nameText, indicator]);
+        // Portrait
+        const portrait = this.add.image(0, -2, `portrait-${p.portrait}`).setDisplaySize(36, 36);
+
+        // Role Badge
+        const roleCircle = this.add.circle(14, 14, 8, 0x000000, 1).setStrokeStyle(1, 0xffffff, 0.3);
+        const roleText = this.add.text(14, 14, role, { fontSize: "8px", fontStyle: "bold", color: "#ffffff" }).setOrigin(0.5);
+
+        // Name Tag (Compact)
+        const nameBg = this.add.rectangle(0, 32, 50, 14, 0x000000, 0.6).setStrokeStyle(1, 0xffffff, 0.1);
+        const nameText = this.add.text(0, 32, p.name.split(" ")[0].toUpperCase(), 
+                          { fontSize: "9px", fontStyle: "black", color: "#ffffff" }).setOrigin(0.5);
+
+        container.add([shadow, base, glow, portrait, roleCircle, roleText, nameBg, nameText]);
 
         this.playerMap.set(uniqueId, {
           container,
-          card,
+          card: base as any,
           worldX: wx,
           worldY: wy,
           baseX: wx,
@@ -524,7 +518,7 @@ export class MatchScene extends Phaser.Scene {
     EventBus.emit("ultimate-update", 0);
 
     // Whistle at match start
-    try { this.sound.play("whistle", { volume: 0.5 }); } catch (e) {}
+    matchAudio.play("whistle");
   }
 
   private onMatchEvent(event: MatchEvent) {
@@ -547,7 +541,7 @@ export class MatchScene extends Phaser.Scene {
 
     switch (event.type) {
       case "kickoff":
-        try { this.sound.play("whistle"); } catch (e) {}
+        matchAudio.play("whistle");
         this.ballWorldX = LOGIC_W / 2;
         this.ballWorldY = LOGIC_H / 2;
         this.possession = event.team;
@@ -580,7 +574,7 @@ export class MatchScene extends Phaser.Scene {
         break;
 
       case "save":
-        try { this.sound.play("save"); } catch (e) {}
+        matchAudio.play("save");
         if (actor && target) {
           const sDef = this.playerDefs.get(targetId!);
           const kDef = this.playerDefs.get(actorId!);
@@ -595,7 +589,7 @@ export class MatchScene extends Phaser.Scene {
         break;
 
       case "goal":
-        try { this.sound.play("goal"); } catch (e) {}
+        matchAudio.play("goal");
         const isHome = event.team === "home";
         this.tweens.add({
           targets: this,
@@ -654,7 +648,7 @@ export class MatchScene extends Phaser.Scene {
 
   private onMatchFinished() {
     if (!this.cameras || !this.cameras.main) return;
-    try { this.sound.play("whistle"); } catch (e) {}
+    matchAudio.play("whistle");
     this.cameras.main.flash(500, 255, 255, 255);
     this.time.delayedCall(500, () => this.cameras.main.fade(1500, 5, 10, 20));
   }
