@@ -168,7 +168,7 @@ export default function DashboardPage() {
                     {player ? (
                       <>
                         <div className="aspect-square mb-2 lg:mb-3 rounded-full overflow-hidden border border-accent/30 shadow-lg group-hover:border-accent">
-                          <img src={`/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
+                          <img src={`/assets/portraits/${player.portrait}.png`} alt={player.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="font-black italic uppercase text-[8px] lg:text-[10px] tracking-tight truncate">{player.name}</div>
                       </>

@@ -117,7 +117,7 @@ export default function LoginPage() {
         <div className="relative z-10 w-full max-w-2xl flex gap-8 py-8 mt-8 h-48 pointer-events-none">
           <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float border-accent/40 bg-accent/10">
             <div className="w-20 h-20 rounded-full bg-accent/20 overflow-hidden">
-              <img src="/portraits/aegis.png" alt="Aegis" className="w-full h-full object-cover" />
+              <img src="/assets/portraits/aegis.png" alt="Aegis" className="w-full h-full object-cover" />
             </div>
             <div className="text-center">
               <div className="font-bold text-sm">Aegis</div>
@@ -126,7 +126,7 @@ export default function LoginPage() {
           </div>
           <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float-delayed border-danger/40 bg-danger/10 translate-y-12">
             <div className="w-20 h-20 rounded-full bg-danger/20 overflow-hidden">
-              <img src="/portraits/blaze.png" alt="Blaze" className="w-full h-full object-cover" />
+              <img src="/assets/portraits/blaze.png" alt="Blaze" className="w-full h-full object-cover" />
             </div>
             <div className="text-center">
               <div className="font-bold text-sm">Blaze</div>
@@ -135,7 +135,7 @@ export default function LoginPage() {
           </div>
           <div className="card p-4 w-40 h-56 flex flex-col items-center gap-3 animate-float border-warning/40 bg-warning/10">
             <div className="w-20 h-20 rounded-full bg-warning/20 overflow-hidden">
-              <img src="/portraits/titan.png" alt="Titan" className="w-full h-full object-cover" />
+              <img src="/assets/portraits/titan.png" alt="Titan" className="w-full h-full object-cover" />
             </div>
             <div className="text-center">
               <div className="font-bold text-sm">Titan</div>

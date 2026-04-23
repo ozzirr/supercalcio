@@ -98,7 +98,7 @@ export class MatchScene extends Phaser.Scene {
     // Dynamic preloading of all defined player portraits
     const uniquePortraits = Array.from(new Set(STARTER_PLAYERS.map(p => p.portrait)));
     uniquePortraits.forEach(p => {
-      this.load.image(`portrait-${p}`, `/portraits/${p}.png`);
+      this.load.image(p, `/assets/portraits/${p}.png`);
     });
 
     // Match Engine 2.0 Assets
@@ -114,7 +114,7 @@ export class MatchScene extends Phaser.Scene {
     const currentWScale = topWScale + (1 - topWScale) * yNorm;
     const currentW = this.screenW * currentWScale;
     const offset = (this.screenW - currentW) / 2;
-    
+
     // Adjust for camera panning
     const camOffset = (this.camX - 500) * (currentW / LOGIC_W) * 0.6;
     return offset + (wx / LOGIC_W) * currentW - camOffset;
@@ -123,7 +123,7 @@ export class MatchScene extends Phaser.Scene {
   private getScreenY(wy: number) {
     const yNorm = wy / LOGIC_H;
     // Non-linear Y compression to create a 3D floor effect
-    const yMapped = Math.pow(yNorm, 1.2); 
+    const yMapped = Math.pow(yNorm, 1.2);
     const horizonOffset = 120; // Lower horizon for better stadium visibility
     const fieldHeight = this.screenH - horizonOffset - 20;
     return horizonOffset + yMapped * fieldHeight;
@@ -266,7 +266,7 @@ export class MatchScene extends Phaser.Scene {
           this.ball.setScale(bScale);
           this.ballSprite.angle += 10;
           this.ball.setDepth(200 + this.ballWorldY + 1); // Ball slightly in front of players at same Y
-          
+
           // Update Stadium Backdrop scroll based on cam
           if (this.stadiumBackdrop) {
               this.stadiumBackdrop.tilePositionX = this.camX * 0.2;
@@ -337,13 +337,13 @@ export class MatchScene extends Phaser.Scene {
 
   private drawPitch() {
     const { screenW, screenH } = this;
-    
+
     // 0. Deep Background Sky
     this.add.rectangle(screenW/2, screenH/2, screenW, screenH, 0x0a162d).setDepth(-100);
 
     // 1. Stadium Backdrop (Refined alignment)
     if (this.stadiumBackdrop) this.stadiumBackdrop.destroy();
-    
+
     // We want the crowd part of the image (middle/bottom) to line up with the horizon
     this.stadiumBackdrop = this.add.tileSprite(screenW/2, 70, screenW * 2, 380, "match-stadium")
         .setScrollFactor(0)
@@ -352,7 +352,7 @@ export class MatchScene extends Phaser.Scene {
         .setAlpha(1);
     
     // Adjust Y offset of the texture to show the stands
-    this.stadiumBackdrop.tilePositionY = 150; 
+    this.stadiumBackdrop.tilePositionY = 150;
 
     // 2. Horizon Transition (Wall/Advertising Boards)
     const g = this.pitchGraphics || this.add.graphics();
@@ -366,7 +366,7 @@ export class MatchScene extends Phaser.Scene {
     // Draw a dark "Wall" at the horizon to bridge the pitch and backdrop
     g.fillStyle(0x05070a, 1);
     g.fillRect(0, 110, screenW, 20); // Thick barrier at the pitch start
-    
+
     // 3. Pitch Surface (Texture Tiling)
 
     // Render the grass using a series of trapezoids to simulate perspective tiling
@@ -374,16 +374,16 @@ export class MatchScene extends Phaser.Scene {
     for (let j = 0; j < rows; j++) {
         const wyS = (j * LOGIC_H) / rows;
         const wyE = ((j + 1) * LOGIC_H) / rows;
-        
+
         // Alternate dark/light green for the "striped" look from the image
-        const color = j % 2 === 0 ? 0x166534 : 0x14532d; 
+        const color = j % 2 === 0 ? 0x166534 : 0x14532d;
         g.fillStyle(color, 1);
-        
+
         const p1 = new Phaser.Math.Vector2(getX(0, wyS), getY(wyS));
         const p2 = new Phaser.Math.Vector2(getX(LOGIC_W, wyS), getY(wyS));
         const p3 = new Phaser.Math.Vector2(getX(LOGIC_W, wyE), getY(wyE));
         const p4 = new Phaser.Math.Vector2(getX(0, wyE), getY(wyE));
-        
+
         g.fillPoints([p1, p2, p3, p4], true);
     }
 
@@ -400,7 +400,7 @@ export class MatchScene extends Phaser.Scene {
 
     // Center Logic
     g.lineBetween(getX(LOGIC_W/2, 20), getY(20), getX(LOGIC_W/2, LOGIC_H-20), getY(LOGIC_H-20));
-    
+
     // High-quality Center Circle
     g.beginPath();
     for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.1) {
@@ -427,7 +427,7 @@ export class MatchScene extends Phaser.Scene {
     // 4. Goals (3D Wireframe with Glow)
     g.lineStyle(4, 0xffffff, 0.9);
     const goalY1 = LOGIC_H/2 - 90, goalY2 = LOGIC_H/2 + 90;
-    const gD = 50; 
+    const gD = 50;
     // Left
     g.lineBetween(getX(20, goalY1), getY(goalY1), getX(20-gD, goalY1), getY(goalY1));
     g.lineBetween(getX(20, goalY2), getY(goalY2), getX(20-gD, goalY2), getY(goalY2));
@@ -448,11 +448,11 @@ export class MatchScene extends Phaser.Scene {
     this.ball = this.add.container(0, 0);
     // Sophisticated shadow
     this.ballShadow = this.add.ellipse(0, 10, 15, 6, 0x000000, 0.5);
-    
+
     // High-fidelity ball sprite
     const ballImg = this.add.image(0, 0, "match-ball").setDisplaySize(16, 16);
     this.ballSprite = ballImg as any; // Cast for rotation compatibility
-    
+
     this.ball.add([this.ballShadow, ballImg]);
   }
 
@@ -469,6 +469,7 @@ export class MatchScene extends Phaser.Scene {
       let fieldIdx = 0;
 
       roster.forEach((p) => {
+        console.log(`[Phaser] Player: ${p.name}, Portrait: ${p.portrait}`);
         const uniqueId = `${isHome ? "home" : "away"}-${p.id}`;
         this.playerDefs.set(uniqueId, p);
 
@@ -500,15 +501,15 @@ export class MatchScene extends Phaser.Scene {
         const athlete = this.add.image(0, -35, "match-player")
             .setDisplaySize(80, 100)
             .setTint(teamColor); // Subtle kit tint
-        
+
         // 3. Compact Floating Portrait (for identification)
         const portrait = this.add.image(-15, -75, `portrait-${p.portrait}`)
             .setDisplaySize(28, 28);
         const portraitFrame = this.add.circle(-15, -75, 15, 0x000000, 0.5)
             .setStrokeStyle(1.5, teamColor, 1);
-        
+
         // 4. Name Tag
-        const nameText = this.add.text(0, -95, p.name.split(" ")[0].toUpperCase(), 
+        const nameText = this.add.text(0, -95, p.name.split(" ")[0].toUpperCase(),
                           { fontSize: "10px", fontStyle: "bold", color: "#ffffff", stroke: "#000000", strokeThickness: 2 })
                           .setOrigin(0.5);
 
