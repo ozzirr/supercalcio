@@ -182,3 +182,15 @@ export function generateFullDefinitions(rawPlayers: RawPlayerData[]): PlayerDefi
     };
   });
 }
+
+export async function verifyDatabaseConnection(): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.from("market_players").select("count", { count: "exact", head: true });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("⚠️ Database connection failed:", err);
+    return false;
+  }
+}
