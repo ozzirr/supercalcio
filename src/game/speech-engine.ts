@@ -25,16 +25,16 @@ class SpeechEngine {
   private loadVoices() {
     if (!this.synth) return;
     const voices = this.synth.getVoices();
-    
+
     // Comprehensive list of Italian male-sounding voices across different platforms
     const maleItalianNames = [
       "Luca", "Giorgio", "Cosimo", "Pietro", "Paolo", "Gianni",
       "Daniel", "Google italiano", "Microsoft Cosimo", "Marco", "Fabio"
     ];
-    
+
     // First, try to find an Italian male voice by name or keyword
-    this.voice = voices.find(v => 
-      v.lang.startsWith("it") && 
+    this.voice = voices.find(v =>
+      v.lang.startsWith("it") &&
       (maleItalianNames.some(name => v.name.includes(name)) || v.name.toLowerCase().includes("male"))
     ) || voices.find(v => v.lang.startsWith("it")) || voices[0];
   }
@@ -55,14 +55,14 @@ class SpeechEngine {
 
     const now = Date.now();
     this.lastSpeechTime = now;
-    
+
     // Create new utterance and keep reference to prevent GC issues
     this.currentUtterance = new SpeechSynthesisUtterance(text);
     if (this.voice) this.currentUtterance.voice = this.voice;
     this.currentUtterance.rate = rate;
     this.currentUtterance.pitch = pitch;
     this.currentUtterance.volume = 1.0;
-    
+
     this.currentUtterance.onend = () => { this.currentUtterance = null; };
     this.currentUtterance.onerror = () => { this.currentUtterance = null; };
 
@@ -72,12 +72,12 @@ class SpeechEngine {
 
     // Periodic "kickstart" to prevent the speech engine from timing out
     const kickstart = setInterval(() => {
-        if (this.synth?.speaking) {
-            this.synth.pause();
-            this.synth.resume();
-        } else {
-            clearInterval(kickstart);
-        }
+      if (this.synth?.speaking) {
+        this.synth.pause();
+        this.synth.resume();
+      } else {
+        clearInterval(kickstart);
+      }
     }, 5000);
   }
 
@@ -94,7 +94,7 @@ class SpeechEngine {
       const phrases = [
         `GOOOOOL! GOOOOOL! SEMPRE LUI! ${actorName}!`,
         `RETE! RETE! ESPLODE LO STADIO! HA SEGNATO ${actorName}!`,
-        `INCREDIBILE! UN GOL DA CINETECA! BENUTI NEL MONDO GIOOL!`
+        `INCREDIBILE! UN GOL DA CINETECA!`
       ];
       text = phrases[Math.floor(Math.random() * phrases.length)];
       rate = 1.4;
@@ -103,7 +103,7 @@ class SpeechEngine {
       const phrases = [
         `MIRACOLO DI ${actorName}! LA TOGLIE DALL'INCROCIO!`,
         `${actorName}! MA COSA HA PRESO?! PARATA PAZZESCA!`,
-        `NON PASSA NULLA! INTERVENTO PROVVIDENZIALE PER GIOOL!`
+        `NON PASSA NULLA! INTERVENTO PROVVIDENZIALE!`
       ];
       text = phrases[Math.floor(Math.random() * phrases.length)];
       rate = 1.35;
@@ -111,9 +111,9 @@ class SpeechEngine {
     } else if (event.type === "kickoff") {
       text = "TUTTO PRONTO! SI PARTE! BUON DIVERTIMENTO!";
     } else if (event.type === "full_time") {
-      text = "FISCHIO FINALE! TRIPLICE FISCHIO! FINISCE QUI!";
+      text = "TRIPLICE FISCHIO! FINISCE QUI!";
       priority = true;
-    } 
+    }
     // Low priority / Play-by-play (highly randomized for realism)
     else {
       const rand = Math.random();
@@ -128,6 +128,18 @@ class SpeechEngine {
     if (text) {
       this.speak(text, rate, 1.0, priority);
     }
+  }
+
+  announcePresentation(homeName: string, awayName: string) {
+    const phrases = [
+      `Benvenuti nell'Arena! Oggi ${homeName} affronta ${awayName}. Ci prepariamo ad assistere a un match straordinario, la tensione è altissima!`,
+      `Tutto pronto per la grande sfida tra ${homeName} e ${awayName}. L'atmosfera sugli spalti è elettrizzante!`,
+      `Amici sportivi buonasera! ${homeName} contro ${awayName}. Un match che promette spettacolo e scintille, allacciate le cinture!`,
+      `Il momento è arrivato. ${homeName} sfida ${awayName}. Le squadre stanno per scendere in campo, l'hype è alle stelle!`,
+      `Siamo live per un incontro imperdibile: ${homeName} riceve in casa ${awayName}. Chi avrà la meglio? Lo scopriremo tra poco!`
+    ];
+    const text = phrases[Math.floor(Math.random() * phrases.length)];
+    this.speak(text, 1.15, 1.0, true);
   }
 }
 

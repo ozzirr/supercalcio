@@ -105,7 +105,7 @@ export function MatchOverlay() {
     <div 
       className={`fixed z-[200] transition-all duration-300 ${
         isMatchPage 
-          ? "inset-0 top-[57px] right-auto lg:right-[384px] pointer-events-none" 
+          ? "top-[57px] left-0 right-0 bottom-[40vh] lg:bottom-0 lg:right-[384px] pointer-events-none" 
           : "w-64 h-40 rounded-2xl border-2 border-accent/30 bg-black shadow-2xl overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.02] active:scale-[0.98]"
       }`}
       style={!isMatchPage ? {

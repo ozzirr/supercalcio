@@ -11,6 +11,7 @@ import { STARTER_PLAYERS } from "@/content/players";
 import { useRouter } from "next/navigation";
 import { EventBus } from "@/game/EventBus";
 import { matchAudio } from "@/game/match-audio";
+import { speechEngine } from "@/game/speech-engine";
 import { supabase } from "@/lib/supabase/client";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchChronicle } from "@/components/match/MatchChronicle";
@@ -119,7 +120,12 @@ export default function MatchPage() {
 
       startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
 
+      // Trigger pre-match presentation
+      const homeName = useGameStore.getState().userProfile?.team_name || useGameStore.getState().userProfile?.username || "GIOOL FC";
+      speechEngine.announcePresentation(homeName, awayName);
+
       setTimeout(() => {
+        matchAudio.play("whistle");
         EventBus.emit("init-match", {
           homeRoster,
           awayRoster,
@@ -240,7 +246,7 @@ export default function MatchPage() {
       </div>
 
       {/* 2. SIDEBAR SECTION (FEED & TACTICS) */}
-      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[45vh] lg:h-full border-l border-white/5">
+      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[40vh] lg:h-full border-l border-white/5">
         {/* Mobile Tab Switcher */}
         <div className="flex lg:hidden border-b border-white/5">
           <button 

@@ -1,0 +1,42 @@
+[
+  {
+    "sourceName": "MAIGNAN MIKE",
+    "slug": "mike-maignan",
+    "displayName": "MIKE MAIGNAN",
+    "role": "GK",
+    "team": "Milan",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n36.png",
+    "localImagePath": null
+  },
+  {
+    "sourceName": "DIMARCO FEDERICO",
+    "slug": "federico-dimarco",
+    "displayName": "FEDERICO DIMARCO",
+    "role": "DEF",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b19.png",
+    "localImagePath": null
+  },
+  {
+    "sourceName": "BARELLA NICOLO'",
+    "slug": "nicolo-barella",
+    "displayName": "NICOLO BARELLA'",
+    "role": "MID",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b50.png",
+    "localImagePath": null
+  },
+  {
+    "sourceName": "MARTINEZ LAUTARO",
+    "slug": "lautaro-martinez",
+    "displayName": "LAUTARO MARTINEZ",
+    "role": "ATT",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b07.png",
+    "localImagePath": null
+  }
+]

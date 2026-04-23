@@ -25,6 +25,7 @@ export default function ShopPage() {
   const buyItem = useGameStore(s => s.buyItem);
   const equipItem = useGameStore(s => s.equipItem);
   const buyPack = useGameStore(s => s.buyPack);
+  const syncRoster = useGameStore(s => s.syncRoster);
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [notification, setNotification] = useState<{ text: string; ok: boolean } | null>(null);
@@ -208,10 +209,12 @@ export default function ShopPage() {
       <PackOpeningModal 
         packType={openingPackType}
         revealedPlayer={revealedPlayer}
-        onClose={() => {
+        onClose={async () => {
+          const highlightedPlayerId = revealedPlayer?.id;
+          await syncRoster();
           setOpeningPackType(null);
           setRevealedPlayer(null);
-          router.push("/squad");
+          router.push(highlightedPlayerId ? `/squad?highlight=${highlightedPlayerId}` : "/squad");
         }}
       />
     </div>

@@ -56,6 +56,18 @@ export default function SquadPage() {
     }
   }, [availablePlayers, selectedPlayer]);
 
+  useEffect(() => {
+    const highlightedId = searchParams.get("highlight");
+    if (!highlightedId || availablePlayers.length === 0) return;
+
+    const highlightedPlayer = availablePlayers.find((player) => player.id === highlightedId);
+    if (!highlightedPlayer) return;
+
+    setSelectedPlayer(highlightedPlayer);
+    const newUrl = window.location.pathname;
+    window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, "", newUrl);
+  }, [availablePlayers, searchParams]);
+
   const validation = validateSquad(lineup, availablePlayers);
   const assignedIds = new Set(lineup.map((s) => s.playerId));
 

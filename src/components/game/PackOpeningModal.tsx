@@ -6,11 +6,17 @@ import type { PlayerDefinition } from "@/types/player";
 interface PackOpeningModalProps {
   packType: "starter" | "premium" | null;
   revealedPlayer: PlayerDefinition | null;
-  onClose: () => void;
+  onClose: () => void | Promise<void>;
 }
 
 export function PackOpeningModal({ packType, revealedPlayer, onClose }: PackOpeningModalProps) {
   const [phase, setPhase] = useState<"opening" | "reveal">("opening");
+
+  useEffect(() => {
+    if (!packType) {
+      setPhase("opening");
+    }
+  }, [packType]);
   
   const isPremium = packType === "premium";
   const accentColor = isPremium ? "#fbbf24" : "#60a5fa"; // Gold vs Blue
@@ -118,7 +124,9 @@ export function PackOpeningModal({ packType, revealedPlayer, onClose }: PackOpen
           </div>
 
           <button 
-            onClick={onClose}
+            onClick={() => {
+              void onClose();
+            }}
             className="mt-12 w-full py-5 btn-primary rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(251,191,36,0.3)] hover:scale-105 active:scale-95 duration-200"
           >
             Aggiungi al Roster
