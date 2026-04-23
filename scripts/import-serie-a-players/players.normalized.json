@@ -1,0 +1,402 @@
+[
+  {
+    "sourceName": "MAIGNAN MIKE",
+    "slug": "mike-maignan",
+    "displayName": "MIKE MAIGNAN",
+    "role": "GK",
+    "team": "Milan",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n36.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_mike_maignan.png"
+  },
+  {
+    "sourceName": "CARNESECCHI MARCO",
+    "slug": "marco-carnesecchi",
+    "displayName": "MARCO CARNESECCHI",
+    "role": "GK",
+    "team": "Atalanta",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b35.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_marco_carnesecchi.png"
+  },
+  {
+    "sourceName": "MILINKOVIC SAVIC VANJA",
+    "slug": "savic-milinkovic-vanja",
+    "displayName": "SAVIC MILINKOVIC VANJA",
+    "role": "GK",
+    "team": "Napoli",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b02.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_savic_milinkovic_vanja.png"
+  },
+  {
+    "sourceName": "DI GREGORIO MICHELE",
+    "slug": "gregorio-di-michele",
+    "displayName": "GREGORIO DI MICHELE",
+    "role": "GK",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b43.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_gregorio_di_michele.png"
+  },
+  {
+    "sourceName": "FALCONE WLADIMIRO",
+    "slug": "wladimiro-falcone",
+    "displayName": "WLADIMIRO FALCONE",
+    "role": "GK",
+    "team": "Lecce",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b72.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_wladimiro_falcone.png"
+  },
+  {
+    "sourceName": "DE GEA DAVID",
+    "slug": "gea-de-david",
+    "displayName": "GEA DE DAVID",
+    "role": "GK",
+    "team": "Fiorentina",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b64.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_gea_de_david.png"
+  },
+  {
+    "sourceName": "BUTEZ JEAN",
+    "slug": "jean-butez",
+    "displayName": "JEAN BUTEZ",
+    "role": "GK",
+    "team": "Como",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b39.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_jean_butez.png"
+  },
+  {
+    "sourceName": "SVILAR MILE",
+    "slug": "mile-svilar",
+    "displayName": "MILE SVILAR",
+    "role": "GK",
+    "team": "Roma",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b31.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_mile_svilar.png"
+  },
+  {
+    "sourceName": "MURIC ARIJANET",
+    "slug": "arijanet-muric",
+    "displayName": "ARIJANET MURIC",
+    "role": "GK",
+    "team": "Sassuolo",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b21.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_arijanet_muric.png"
+  },
+  {
+    "sourceName": "OKOYE MADUKA",
+    "slug": "maduka-okoye",
+    "displayName": "MADUKA OKOYE",
+    "role": "GK",
+    "team": "Udinese",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n06.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/gk_maduka_okoye.png"
+  },
+  {
+    "sourceName": "DIMARCO FEDERICO",
+    "slug": "federico-dimarco",
+    "displayName": "FEDERICO DIMARCO",
+    "role": "DEF",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b19.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_federico_dimarco.png"
+  },
+  {
+    "sourceName": "KALULU PIERRE",
+    "slug": "pierre-kalulu",
+    "displayName": "PIERRE KALULU",
+    "role": "DEF",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n01.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_pierre_kalulu.png"
+  },
+  {
+    "sourceName": "CAMBIASO ANDREA",
+    "slug": "andrea-cambiaso",
+    "displayName": "ANDREA CAMBIASO",
+    "role": "DEF",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b11.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_andrea_cambiaso.png"
+  },
+  {
+    "sourceName": "AUGUSTO CARLOS",
+    "slug": "carlos-augusto",
+    "displayName": "CARLOS AUGUSTO",
+    "role": "DEF",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b14.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_carlos_augusto.png"
+  },
+  {
+    "sourceName": "DI LORENZO GIOVANNI",
+    "slug": "lorenzo-di-giovanni",
+    "displayName": "LORENZO DI GIOVANNI",
+    "role": "DEF",
+    "team": "Napoli",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b26.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_lorenzo_di_giovanni.png"
+  },
+  {
+    "sourceName": "ZAPPACOSTA DAVIDE",
+    "slug": "davide-zappacosta",
+    "displayName": "DAVIDE ZAPPACOSTA",
+    "role": "DEF",
+    "team": "Atalanta",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b25.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_davide_zappacosta.png"
+  },
+  {
+    "sourceName": "PONGRACIC MARIN",
+    "slug": "marin-pongracic",
+    "displayName": "MARIN PONGRACIC",
+    "role": "DEF",
+    "team": "Fiorentina",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b21.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_marin_pongracic.png"
+  },
+  {
+    "sourceName": "PEDERSEN MARCUS",
+    "slug": "marcus-pedersen",
+    "displayName": "MARCUS PEDERSEN",
+    "role": "DEF",
+    "team": "Torino",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b41.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_marcus_pedersen.png"
+  },
+  {
+    "sourceName": "GALLO ANTONINO",
+    "slug": "antonino-gallo",
+    "displayName": "ANTONINO GALLO",
+    "role": "DEF",
+    "team": "Lecce",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b21.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_antonino_gallo.png"
+  },
+  {
+    "sourceName": "DODO' DOMILSON",
+    "slug": "dodo-domilson",
+    "displayName": "DODO' DOMILSON",
+    "role": "DEF",
+    "team": "Fiorentina",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n34.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/def_dodo_domilson.png"
+  },
+  {
+    "sourceName": "BARELLA NICOLO'",
+    "slug": "nicolo-barella",
+    "displayName": "NICOLO BARELLA'",
+    "role": "MID",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b50.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_nicolo_barella.png"
+  },
+  {
+    "sourceName": "SAELEMAEKERS ALEXIS",
+    "slug": "alexis-saelemaekers",
+    "displayName": "ALEXIS SAELEMAEKERS",
+    "role": "MID",
+    "team": "Milan",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b15.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_alexis_saelemaekers.png"
+  },
+  {
+    "sourceName": "RABIOT ADRIEN",
+    "slug": "adrien-rabiot",
+    "displayName": "ADRIEN RABIOT",
+    "role": "MID",
+    "team": "Milan",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b30.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_adrien_rabiot.png"
+  },
+  {
+    "sourceName": "CALHANOGLU HAKAN",
+    "slug": "hakan-calhanoglu",
+    "displayName": "HAKAN CALHANOGLU",
+    "role": "MID",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b17.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_hakan_calhanoglu.png"
+  },
+  {
+    "sourceName": "PASALIC MARIO",
+    "slug": "mario-pasalic",
+    "displayName": "MARIO PASALIC",
+    "role": "MID",
+    "team": "Atalanta",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b45.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_mario_pasalic.png"
+  },
+  {
+    "sourceName": "MCKENNIE WESTON",
+    "slug": "weston-mckennie",
+    "displayName": "WESTON MCKENNIE",
+    "role": "MID",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n33.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_weston_mckennie.png"
+  },
+  {
+    "sourceName": "DA CUNHA LUCAS",
+    "slug": "cunha-da-lucas",
+    "displayName": "CUNHA DA LUCAS",
+    "role": "MID",
+    "team": "Como",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b17.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_cunha_da_lucas.png"
+  },
+  {
+    "sourceName": "MCTOMINAY SCOTT",
+    "slug": "scott-mctominay",
+    "displayName": "SCOTT MCTOMINAY",
+    "role": "MID",
+    "team": "Napoli",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b27.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_scott_mctominay.png"
+  },
+  {
+    "sourceName": "PELLEGRINI LORENZO",
+    "slug": "lorenzo-pellegrini",
+    "displayName": "LORENZO PELLEGRINI",
+    "role": "MID",
+    "team": "Roma",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b36.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_lorenzo_pellegrini.png"
+  },
+  {
+    "sourceName": "ZIELINSKI PIOTR",
+    "slug": "piotr-zielinski",
+    "displayName": "PIOTR ZIELINSKI",
+    "role": "MID",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/centrocampisti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b23.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/mid_piotr_zielinski.png"
+  },
+  {
+    "sourceName": "MARTINEZ LAUTARO",
+    "slug": "lautaro-martinez",
+    "displayName": "LAUTARO MARTINEZ",
+    "role": "ATT",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b07.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_lautaro_martinez.png"
+  },
+  {
+    "sourceName": "YILDIZ KENAN",
+    "slug": "kenan-yildiz",
+    "displayName": "KENAN YILDIZ",
+    "role": "ATT",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b39.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_kenan_yildiz.png"
+  },
+  {
+    "sourceName": "THURAM MARCUS",
+    "slug": "marcus-thuram",
+    "displayName": "MARCUS THURAM",
+    "role": "ATT",
+    "team": "Inter",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n01.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_marcus_thuram.png"
+  },
+  {
+    "sourceName": "DOUVIKAS ANASTASIOS",
+    "slug": "anastasios-douvikas",
+    "displayName": "ANASTASIOS DOUVIKAS",
+    "role": "ATT",
+    "team": "Como",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b33.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_anastasios_douvikas.png"
+  },
+  {
+    "sourceName": "KRSTOVIC NIKOLA",
+    "slug": "nikola-krstovic",
+    "displayName": "NIKOLA KRSTOVIC",
+    "role": "ATT",
+    "team": "Atalanta",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b16.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_nikola_krstovic.png"
+  },
+  {
+    "sourceName": "LEAO RAFAEL",
+    "slug": "rafael-leao",
+    "displayName": "RAFAEL LEAO",
+    "role": "ATT",
+    "team": "Milan",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n30.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_rafael_leao.png"
+  },
+  {
+    "sourceName": "LUKAKU ROMELU",
+    "slug": "romelu-lukaku",
+    "displayName": "ROMELU LUKAKU",
+    "role": "ATT",
+    "team": "Napoli",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n01.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_romelu_lukaku.png"
+  },
+  {
+    "sourceName": "BOGA JEREMIE",
+    "slug": "jeremie-boga",
+    "displayName": "JEREMIE BOGA",
+    "role": "ATT",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/n03.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_jeremie_boga.png"
+  },
+  {
+    "sourceName": "CONCEICAO FRANCISCO",
+    "slug": "francisco-conceicao",
+    "displayName": "FRANCISCO CONCEICAO",
+    "role": "ATT",
+    "team": "Juventus",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b21.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_francisco_conceicao.png"
+  },
+  {
+    "sourceName": "DOVBYK ARTEM",
+    "slug": "artem-dovbyk",
+    "displayName": "ARTEM DOVBYK",
+    "role": "ATT",
+    "team": "Roma",
+    "sourcePage": "https://www.fantacalciopedia.com/lista-calciatori-serie-a/attaccanti/",
+    "sourceImageUrl": "https://www.fantacalciopedia.com/dnadmin/cms_files/calciatori/puppet/b23.png",
+    "localImagePath": "/Users/andrerizzo/Documents/GitHub/supercalcio/photo-players/att_artem_dovbyk.png"
+  }
+]
