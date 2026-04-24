@@ -26,7 +26,8 @@ export default function SquadPage() {
     setPlaystyle,
     saveSquad,
     claimStarterPack,
-    resetRoster
+    resetRoster,
+    energyAmount
   } = useGameStore();
 
   const router = useRouter();
@@ -229,9 +230,9 @@ export default function SquadPage() {
                 }
               }}
               disabled={!validation.valid}
-              className={`btn-primary text-[10px] py-2 px-4 rounded-xl font-black uppercase tracking-widest ${!validation.valid ? "opacity-30 pointer-events-none" : "shadow-lg shadow-accent/20"}`}
+              className={`btn-primary text-[10px] py-2 px-4 rounded-xl font-black uppercase tracking-widest ${(!validation.valid || energyAmount <= 0) ? "opacity-30 pointer-events-none" : "shadow-lg shadow-accent/20"}`}
             >
-              Inizia Partita
+              Inizia Partita ({energyAmount}/3)
             </button>
           </div>
         </div>

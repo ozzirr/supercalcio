@@ -20,6 +20,7 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
   const user = useGameStore((s) => s.user);
   const teamName = useGameStore((s) => s.teamName);
   const logout = useGameStore((s) => s.logout);
+  const energyAmount = useGameStore((s) => s.energyAmount);
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -91,7 +92,20 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
           </div>
 
           {/* RIGHT: Team Info & Actions */}
-          <div className="flex-1 flex items-center justify-end gap-4 lg:gap-6">
+          <div className="flex-1 flex items-center justify-end gap-3 lg:gap-6">
+            {/* Match CTA */}
+            <Link 
+              href="/match" 
+              className={`hidden md:flex items-center gap-2 px-5 py-2 rounded-full font-black uppercase text-[10px] tracking-[0.1em] transition-all duration-300 ${
+                energyAmount > 0 
+                ? "bg-accent text-black hover:scale-105 shadow-[0_10px_20px_rgba(251,191,36,0.2)] active:scale-95" 
+                : "bg-white/5 text-white/40 border border-white/10 opacity-50 cursor-not-allowed"
+              }`}
+            >
+              <span className="text-xs animate-pulse">▶</span>
+              GIOCA ({energyAmount}/3)
+            </Link>
+
             <button 
               onClick={onOpenProfile}
               className="flex items-center gap-3 bg-[#0a0f16]/80 border border-white/10 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full hover:bg-white/10 hover:border-accent/30 transition-all cursor-pointer shadow-inner"

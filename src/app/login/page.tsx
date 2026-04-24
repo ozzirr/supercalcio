@@ -58,10 +58,15 @@ export default function LoginPage() {
       <div className="relative hidden md:flex flex-1 flex-col justify-between p-12 lg:p-16 overflow-hidden border-r border-white/5">
         
         {/* Cinematic Backdrop */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[#0a0a0c]"></div>
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-cover bg-center scale-110 blur-[2px] opacity-40 animate-[pulse_10s_ease-in-out_infinite]"
+            style={{ backgroundImage: "url('/assets/loading-bg.png')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c] via-[#0a0a0c]/60 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-[#0a0a0c]"></div>
+          
           <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-accent/5 blur-[150px] rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-500/5 blur-[120px] rounded-full translate-x-1/3 translate-y-1/3"></div>
           
           {/* Subtle Grid Overlay */}
           <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-10"></div>
