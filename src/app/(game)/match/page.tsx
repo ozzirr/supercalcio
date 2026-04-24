@@ -20,6 +20,23 @@ import { TacticalPanel } from "@/components/match/TacticalPanel";
 import PhaserGame from "@/components/game/PhaserGame";
 import { motion, AnimatePresence } from "framer-motion";
 
+const getPlayerOVR = (p: any) => {
+  if (!p) return 0;
+  const s = p.stats;
+  if (!s) return 0;
+  return Math.round((s.pace + s.shooting + s.passing + s.defense + s.physical) / 5);
+};
+
+const getPositionLabel = (p: any) => {
+  if (!p || !p.roleTags || p.roleTags.length === 0) return "FLEX";
+  const role = p.roleTags[0];
+  if (role === "goalkeeper") return "GK";
+  if (role === "defender") return "DEF";
+  if (role === "midfielder") return "MID";
+  if (role === "attacker") return "ATK";
+  return "FLX";
+};
+
 export default function MatchPage() {
   const router = useRouter();
 
@@ -228,6 +245,7 @@ export default function MatchPage() {
     setStance(s);
     useGameStore.getState().matchEngine?.intervene("home", { type: "stance_change", stance: s });
   };
+
 
   return (
     <div className="fixed inset-0 top-16 lg:top-20 flex flex-col bg-[#05070a] overflow-hidden z-20">
