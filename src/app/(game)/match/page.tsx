@@ -355,7 +355,7 @@ export default function MatchPage() {
                              <img src={`/assets/portraits/${p.portrait}.png`} className="w-full h-full object-cover" />
                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
                              <div className="absolute bottom-2 inset-x-0 text-[8px] font-black text-white uppercase text-center truncate px-1">{p.name.split(' ')[0]}</div>
-                             <div className="absolute top-2 right-2 text-[10px] font-black text-gold drop-shadow-md">{p.overallRating || 75}</div>
+                             <div className="absolute top-2 right-2 text-[10px] font-black text-gold drop-shadow-md">{getPlayerOVR(p) || 75}</div>
                              {selectedSubId === p.id && (
                                 <div className="absolute -top-1 -left-1 bg-gold text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">✓</div>
                              )}
@@ -385,8 +385,8 @@ export default function MatchPage() {
                          canSub ? "border-gold ring-2 ring-gold/20 cursor-pointer scale-[1.02] shadow-[0_0_20px_rgba(251,191,36,0.1)]" : "border-white/10"
                        }`}
                      >
-                        <div className="absolute top-2 left-2 z-10 text-[10px] font-black text-white italic">{player.overallRating || 78}</div>
-                        <div className="absolute top-2 right-2 z-10 text-[8px] font-black text-white/40 uppercase">{player.position}</div>
+                        <div className="absolute top-2 left-2 z-10 text-[10px] font-black text-white italic">{getPlayerOVR(player) || 78}</div>
+                        <div className="absolute top-2 right-2 z-10 text-[8px] font-black text-white/40 uppercase">{getPositionLabel(player)}</div>
                         <img src={`/assets/portraits/${player.portrait}.png`} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                         
