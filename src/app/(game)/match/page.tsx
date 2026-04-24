@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { validateSquad, type Playstyle } from "@/types/squad";
+import type { TeamStance, TeamCommand } from "@/types/match";
 import { MatchEngine } from "@/engine/match-engine";
 import { generateSeed } from "@/engine/random";
 import { formatMatchEvent, tickToMatchTime } from "@/utils/formatting";
@@ -115,12 +116,12 @@ export default function MatchPage() {
             totalTicks,
             halftimeTick: 45,
             seed: generateSeed(),
-            homePlaystyle: playstyle,
-            awayPlaystyle: awayPlaystyle,
-            homeStance: stance,
-            awayStance: "balanced",
-            homeCommand: command,
-            awayCommand: "none",
+            homePlaystyle: playstyle as Playstyle,
+            awayPlaystyle: awayPlaystyle as Playstyle,
+            homeStance: stance as TeamStance,
+            awayStance: "balanced" as TeamStance,
+            homeCommand: command as TeamCommand,
+            awayCommand: "none" as TeamCommand,
           },
           homeRoster,
           awayRoster
