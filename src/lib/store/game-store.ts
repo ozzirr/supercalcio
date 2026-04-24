@@ -25,6 +25,7 @@ type GameState = {
   matchEngine: any | null;
   matchInterval: NodeJS.Timeout | null;
   opponentInfo: { name: string; badge: string; playstyle: string } | null;
+  matchRosters: { home: PlayerDefinition[]; away: PlayerDefinition[] } | null;
   
   // HUD states
   stance: TeamStance;
@@ -94,6 +95,7 @@ type GameState = {
   consumeEnergy: () => Promise<boolean>;
   checkDailyReward: () => void;
   claimDailyReward: () => Promise<any>;
+  substituteInMatch: (oldPlayerId: string, newPlayerId: string) => void;
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -110,6 +112,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   matchEngine: null,
   matchInterval: null,
   opponentInfo: null,
+  matchRosters: null,
   
   stance: "balanced",
   command: "none",
@@ -549,6 +552,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       matchScore: { home: 0, away: 0 },
       matchEvents: [],
       opponentInfo: opponent,
+      matchRosters: null, // Will be set by the page that starts it
       stance: "balanced",
       command: "none"
     });
@@ -598,13 +602,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Save to DB
     await supabase.from('matches').insert({
       home_user_id: user.id,
-      away_user_name: opponentInfo?.name || "AI",
+      away_user_id: null, // Currently only against bots
       home_score: matchScore.home,
       away_score: matchScore.away,
       winner_id: matchOutcome.result.outcome === "win" ? user.id : null,
       match_data: {
         timeline: matchEngine.getTimeline(),
-        playerStats: matchOutcome.playerStats
+        playerStats: matchOutcome.playerStats,
+        home_name: get().teamName,
+        home_badge: get().badgeId,
+        away_name: opponentInfo?.name || "AI BOTS",
+        away_badge: opponentInfo?.badge || "badge_lightning"
       }
     });
 
@@ -821,5 +829,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     }).eq('id', state.user.id);
 
     return { type: packReward ? 'pack' : 'currency', text: rewardText, player: packReward };
+  },
+
+  substituteInMatch: (oldPlayerId, newPlayerId) => {
+    const { matchEngine, lineup, availablePlayers } = get();
+    if (!matchEngine) return;
+
+    const newPlayer = availablePlayers.find(p => p.id === newPlayerId);
+    if (!newPlayer) return;
+
+    // 1. Update Match Engine
+    matchEngine.substitute("home", oldPlayerId, newPlayer);
+
+    // 2. Update Local Lineup
+    const newLineup = lineup.map(slot => 
+      slot.playerId === oldPlayerId ? { ...slot, playerId: newPlayerId } : slot
+    );
+    set({ lineup: newLineup });
+
+    // 3. Emit event for Phaser
+    import("@/game/EventBus").then(({ EventBus }) => {
+      EventBus.emit("substitution", { oldPlayerId, newPlayerId });
+    });
   }
 }));

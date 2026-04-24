@@ -21,89 +21,94 @@ export function MatchChronicle({ events, totalTicks, isSearching }: MatchChronic
     }
   }, [events]);
 
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case "pass": return "🏃";
+      case "tackle": return "🛡️";
+      case "possession": return "⚽";
+      case "shot": return "🎯";
+      case "goal": return "🔥";
+      case "save": return "🧤";
+      default: return "⚽";
+    }
+  };
+
+  const getEventLabel = (type: string) => {
+    switch (type) {
+      case "pass": return "PASSAGGIO";
+      case "tackle": return "CONTRASTO";
+      case "possession": return "POSSESSO";
+      case "shot": return "TIRO";
+      case "goal": return "GOAL!";
+      case "save": return "PARATA";
+      default: return type.toUpperCase();
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-black/20 backdrop-blur-sm border-l border-white/5">
-      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-        <span className="text-[10px] text-accent font-black uppercase tracking-[0.2em]">LIVE CHRONICLE</span>
+    <div className="flex flex-col h-full bg-black/20 backdrop-blur-3xl rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
+      <div className="p-3 border-b border-white/5 flex items-center justify-between">
+        <span className="text-[10px] text-white font-black uppercase tracking-[0.2em]">CRONACA LIVE</span>
         <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[8px] text-muted font-bold uppercase tracking-widest">FEED ATTIVO</span>
+          <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+          <span className="text-[8px] text-white/40 font-black uppercase tracking-widest">LIVE</span>
         </div>
       </div>
 
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-hide"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-hide"
       >
         {events.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-12">
-            <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/10 animate-spin flex items-center justify-center">
-               <div className="w-6 h-6 rounded-full border-2 border-accent/20 border-t-accent animate-spin" />
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-3 py-8">
+            <div className="w-8 h-8 rounded-full border-2 border-dashed border-white/10 animate-spin flex items-center justify-center">
+               <div className="w-4 h-4 rounded-full border-2 border-gold/20 border-t-gold animate-spin" />
             </div>
-            <p className="text-[10px] text-muted font-medium uppercase tracking-[0.2em]">
-              {isSearching ? "CONFIGURAZIONE ARENA..." : "IN ATTESA DEL CALCIO D'INIZIO..."}
+            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">
+               Configurazione Arena...
             </p>
           </div>
         )}
 
         <AnimatePresence initial={false}>
           {events.map((e, idx) => {
-            const isGoal = e.type === "goal";
-            const isBreak = e.type === "halftime" || e.type === "full_time";
-            const isHighlight = ["save", "yellow_card", "red_card"].includes(e.type);
-
+            const isHome = e.team === "home";
             return (
               <motion.div
                 key={`${e.tick}-${idx}`}
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className={`group relative flex gap-3 items-start p-3 rounded-2xl transition-all border ${
-                  isGoal
-                    ? "bg-accent/10 border-accent/30 shadow-lg shadow-accent/5"
-                    : isBreak
-                    ? "bg-white/10 border-white/20 justify-center text-center italic"
-                    : isHighlight
-                    ? "bg-rose-500/10 border-rose-500/30"
-                    : "bg-white/5 border-white/5 hover:bg-white/10"
-                }`}
+                className="flex gap-3 items-start group"
               >
-                {!isBreak && (
-                  <div className={`shrink-0 w-10 h-10 rounded-xl flex flex-col items-center justify-center font-mono text-[10px] font-black border ${
-                    isGoal ? "bg-accent text-black border-accent" : "bg-black/40 text-muted border-white/10"
-                  }`}>
-                    {tickToMatchTime(e.tick, totalTicks)}
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {isGoal && <span className="text-xs">⚽</span>}
-                    {e.type === "save" && <span className="text-xs">🧤</span>}
-                    {e.type === "yellow_card" && <span className="text-xs">🟨</span>}
-                    {e.type === "red_card" && <span className="text-xs">🟥</span>}
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${
-                      isGoal ? "text-accent" : isHighlight ? "text-rose-400" : "text-muted/60"
-                    }`}>
-                      {e.type.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className={`text-xs lg:text-sm leading-tight font-medium ${
-                    isGoal ? "text-white font-bold" : "text-foreground/80"
-                  }`}>
-                    {formatMatchEvent(e, STARTER_PLAYERS)}
-                  </p>
+                <div className="text-[10px] font-black text-white/40 tabular-nums min-w-[28px] mt-0.5">
+                   {tickToMatchTime(e.tick, totalTicks)}
                 </div>
 
-                {isGoal && (
-                  <motion.div 
-                    layoutId="goal-glow"
-                    className="absolute inset-0 rounded-2xl bg-accent/5 animate-pulse pointer-events-none" 
-                  />
-                )}
+                <div className="flex-1 flex items-start gap-2 min-w-0">
+                   <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xs shrink-0">
+                      {getEventIcon(e.type)}
+                   </div>
+                   <div className="flex flex-col min-w-0">
+                      <div className="text-[9px] font-black text-white uppercase tracking-wider leading-none mb-0.5">
+                         {getEventLabel(e.type)}
+                      </div>
+                      <p className="text-[9px] text-white/40 font-medium leading-tight truncate">
+                         {formatMatchEvent(e, STARTER_PLAYERS)}
+                      </p>
+                   </div>
+                </div>
+
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${isHome ? "bg-gold shadow-[0_0_8px_#fbbf24]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"}`} />
               </motion.div>
             );
           })}
         </AnimatePresence>
+      </div>
+
+      <div className="p-2 border-t border-white/5 bg-white/[0.02]">
+         <button className="w-full py-2 text-[8px] font-black text-white/40 hover:text-white uppercase tracking-[0.2em] transition-colors">
+            VEDI TUTTA LA CRONACA
+         </button>
       </div>
     </div>
   );

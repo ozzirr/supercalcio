@@ -5,6 +5,7 @@ import type { MatchEvent } from "@/types/match";
 import type { PlayerDefinition } from "@/types/player";
 import { STARTER_PLAYERS } from "@/content/players";
 import { speechEngine } from "./speech-engine";
+import { useGameStore } from "@/lib/store/game-store";
 
 // Engine Modules
 import { LOGIC_W, LOGIC_H, FIELD_Y_SLOTS, ROLE_BASE_X, type PlayerRole } from "./engine/EngineConstants";
@@ -116,6 +117,7 @@ export class MatchScene extends Phaser.Scene {
     EventBus.on("match-event", this.matchEventHandler);
     EventBus.on("match-finished", this.matchFinishedHandler);
     EventBus.on("activate-ultimate", () => this.onActivateUltimate());
+    EventBus.on("substitution", (data: any) => this.onSubstitution(data));
 
     // Broadcast Effects
     const vignette = this.add.graphics();
@@ -138,9 +140,25 @@ export class MatchScene extends Phaser.Scene {
       EventBus.off("match-event", this.matchEventHandler);
       EventBus.off("match-finished", this.matchFinishedHandler);
       EventBus.removeAllListeners("activate-ultimate");
+      EventBus.removeAllListeners("substitution");
     });
 
     EventBus.emit("current-scene-ready", this);
+    
+    // Request initial data if engine is already running (catch-up)
+    // Request initial data if engine is already running (catch-up)
+    const state = useGameStore.getState();
+    if (state.matchInProgress && state.matchRosters) {
+      this.onInitMatch({
+        homeRoster: state.matchRosters.home,
+        awayRoster: state.matchRosters.away,
+        stadiumId: state.equippedStadium,
+        kitId: state.equippedKit,
+        badgeId: state.badgeId
+      });
+    } else {
+      EventBus.emit("request-match-init");
+    }
   }
 
   // Proper Phaser Update Loop
@@ -370,7 +388,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onInitMatch(data: InitData) {
-    if (!this || !this.scene || !this.scene.isActive || !this.scene.isActive()) return;
+    if (!this.sys || !this.sys.isActive()) return;
     
     this.playerRenders.forEach(r => r.container.destroy());
     this.playerRenders.clear();
@@ -445,7 +463,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private onMatchEvent(event: MatchEvent) {
-    if (!this || !this.scene || !this.scene.isActive || !this.scene.isActive()) return;
+    if (!this.sys || !this.sys.isActive()) return;
 
     const actorId  = event.actorId ? (this.playerDefs.has(`home-${event.actorId}`) ? `home-${event.actorId}` : `away-${event.actorId}`) : null;
     const targetId = event.targetId ? (this.playerDefs.has(`home-${event.targetId}`) ? `home-${event.targetId}` : `away-${event.targetId}`) : null;
@@ -660,6 +678,54 @@ export class MatchScene extends Phaser.Scene {
       duration: 1000,
       ease: "Back.easeOut",
       onComplete: () => txt.destroy()
+    });
+  }
+
+  private onSubstitution(data: { oldPlayerId: string, newPlayerId: string }) {
+    const homeOldId = `home-${data.oldPlayerId}`;
+    const homeNewId = `home-${data.newPlayerId}`;
+    
+    const oldEntity = this.players.find(p => p.id === homeOldId);
+    const render = this.playerRenders.get(homeOldId);
+    
+    if (!oldEntity || !render) return;
+    
+    const newDef = STARTER_PLAYERS.find(p => p.id === data.newPlayerId);
+    if (!newDef) return;
+
+    // 1. Update Internal Maps
+    this.playerDefs.delete(homeOldId);
+    this.playerDefs.set(homeNewId, newDef);
+    this.playerRenders.delete(homeOldId);
+    this.playerRenders.set(homeNewId, render);
+    
+    // 2. Update Logical Entity
+    oldEntity.id = homeNewId;
+    
+    // 3. Play Animation
+    matchAudio.play("whistle"); // Small whistle for sub
+    
+    this.tweens.add({
+      targets: render.container,
+      alpha: 0,
+      y: "-=20",
+      duration: 300,
+      ease: "Power2",
+      onComplete: () => {
+        // Update Visuals while invisible
+        const nameText = render.container.getAt(2) as Phaser.GameObjects.Text;
+        nameText.setText(newDef.name.split(" ")[0].toUpperCase());
+        
+        // Return to position
+        render.container.y += 20;
+        
+        this.tweens.add({
+          targets: render.container,
+          alpha: 1,
+          duration: 300,
+          ease: "Power2"
+        });
+      }
     });
   }
 }

@@ -213,6 +213,31 @@ export class MatchEngine {
     }
   }
 
+  public substitute(team: "home" | "away", oldPlayerId: string, newPlayer: PlayerDefinition) {
+    if (team === "home") {
+      this.homeRoster = this.homeRoster.map(p => p.id === oldPlayerId ? newPlayer : p);
+    } else {
+      this.awayRoster = this.awayRoster.map(p => p.id === oldPlayerId ? newPlayer : p);
+    }
+    
+    // Ensure new player has stats entry
+    if (!this.playerStats[newPlayer.id]) {
+      this.playerStats[newPlayer.id] = {
+        playerId: newPlayer.id,
+        goals: 0,
+        assists: 0,
+        shots: 0,
+        passes: 0,
+        tackles: 0,
+        saves: 0,
+        abilitiesUsed: 0,
+        rating: 6.0,
+      };
+    }
+    
+    this.addEvent("substitution", team, oldPlayerId, newPlayer.id, {});
+  }
+
   private addEvent(
     type: MatchEvent["type"],
     team: "home" | "away",

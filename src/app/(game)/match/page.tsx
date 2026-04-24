@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase/client";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchChronicle } from "@/components/match/MatchChronicle";
 import { TacticalPanel } from "@/components/match/TacticalPanel";
+import PhaserGame from "@/components/game/PhaserGame";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function MatchPage() {
@@ -28,8 +29,13 @@ export default function MatchPage() {
     ultimateReady, setUltimateReady, activateUltimate,
     matchInProgress, matchTick, matchScore, matchEvents,
     startGlobalMatch, finishMatchAndSave, opponentInfo,
-    equippedStadium
+    equippedStadium, substituteInMatch
   } = useGameStore();
+
+  const [benchOpen, setBenchOpen] = useState(false);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+
+  const benchPlayers = availablePlayers.filter(p => !lineup.some(l => l.playerId === p.id));
 
   const validation = validateSquad(lineup, availablePlayers);
 
@@ -40,41 +46,21 @@ export default function MatchPage() {
 
   const totalTicks = 90;
   const matchInitializedRef = useRef(false);
+  const currentMatchData = useRef<any>(null);
 
   // Setup match IF NOT IN PROGRESS
   useEffect(() => {
     const { matchFinished } = useGameStore.getState();
     
-    if (!validation.valid || matchInProgress || matchInitializedRef.current || matchFinished) {
+    if (!validation.valid || (matchInProgress && matchInitializedRef.current) || matchFinished) {
       if (matchInProgress) setIsSearching(false);
       return;
     }
 
-    matchInitializedRef.current = true;
-
     async function setupMatch() {
       if (!supabase) return;
-      
-      const success = await useGameStore.getState().consumeEnergy();
-      if (!success) {
-        // Just send them back to dashboard if they got here illegally
-        router.push("/dashboard");
-        return;
-      }
 
-      const { data: userAuth } = await supabase.auth.getUser();
-      
-      const { data: squads } = await supabase
-        .from('squads')
-        .select('*, profiles(username, team_name, badge_id)')
-        .neq('user_id', userAuth.user?.id)
-        .limit(10);
-
-      let opponent: any = null;
-      if (squads && squads.length > 0) {
-        opponent = squads[Math.floor(Math.random() * squads.length)];
-      }
-
+      // Prepare match data even if already in progress (for refresh/recovery)
       const homeRoster = lineup.map(l => {
         const basePlayer = availablePlayers.find(p => p.id === l.playerId)!;
         const userPlayer = ownedPlayers.find(p => p.player_id === l.playerId);
@@ -93,53 +79,61 @@ export default function MatchPage() {
         return boosted;
       });
 
-      let awayRoster: typeof STARTER_PLAYERS;
-      let awayPlaystyle: any = "balanced";
-      let awayName = "AI Bots";
-      let awayBadge = "badge_lightning";
+      // Simple AI/Rival generation if not provided by store
+      let awayRoster: any[] = [];
+      let awayName = opponentInfo?.name || "Rival Tech";
+      let awayBadge = opponentInfo?.badge || "badge_lightning";
+      let awayPlaystyle = opponentInfo?.playstyle || "balanced";
 
-      if (opponent) {
-        awayRoster = opponent.lineup.map((slot: any) => 
-          STARTER_PLAYERS.find(p => p.id === slot.playerId) || STARTER_PLAYERS[0]
-        );
-        awayPlaystyle = opponent.playstyle;
-        awayName = opponent.profiles?.team_name || opponent.profiles?.username || "Rival Tech";
-        awayBadge = opponent.profiles?.badge_id || "badge_lightning";
+      if (opponentInfo?.roster) {
+        awayRoster = opponentInfo.roster;
       } else {
+        // Fallback or AI generation
         awayRoster = [...homeRoster].reverse();
       }
-      
-      const engine = new MatchEngine(
-        {
-          totalTicks,
-          halftimeTick: 45,
-          seed: generateSeed(),
-          homePlaystyle: playstyle,
-          awayPlaystyle: awayPlaystyle,
-          homeStance: stance,
-          awayStance: "balanced",
-          homeCommand: command,
-          awayCommand: "none",
-        },
+
+      const matchData = {
         homeRoster,
-        awayRoster
-      );
+        awayRoster,
+        stadiumId: equippedStadium,
+        kitId: useGameStore.getState().equippedKit,
+        badgeId: useGameStore.getState().badgeId
+      };
+      currentMatchData.current = matchData;
 
-      startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
+      if (!matchInProgress && !matchFinished) {
+        matchInitializedRef.current = true;
+        
+        const success = await useGameStore.getState().consumeEnergy();
+        if (!success) {
+          router.push("/dashboard?no-energy=1");
+          return;
+        }
 
-      // Trigger pre-match presentation
-      const homeName = useGameStore.getState().teamName || useGameStore.getState().username || "GOLAZOO FC";
-      speechEngine.announcePresentation(homeName, awayName);
-
-      setTimeout(() => {
-        EventBus.emit("init-match", {
+        const engine = new MatchEngine(
+          {
+            totalTicks,
+            halftimeTick: 45,
+            seed: generateSeed(),
+            homePlaystyle: playstyle,
+            awayPlaystyle: awayPlaystyle,
+            homeStance: stance,
+            awayStance: "balanced",
+            homeCommand: command,
+            awayCommand: "none",
+          },
           homeRoster,
-          awayRoster,
-          stadiumId: equippedStadium,
-          kitId: useGameStore.getState().equippedKit,
-          badgeId: useGameStore.getState().badgeId
-        });
-      }, 2500);
+          awayRoster
+        );
+
+        startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
+        speechEngine.announcePresentation(useGameStore.getState().teamName || "GOLAZOO FC", awayName);
+      }
+
+      // Always try to init Phaser if it requests it
+      setTimeout(() => {
+        EventBus.emit("init-match", currentMatchData.current);
+      }, 1000);
     }
 
     setupMatch();
@@ -147,10 +141,19 @@ export default function MatchPage() {
     const onEngineReady = () => {
       setIsSearching(false);
     };
+
+    const onInitRequest = () => {
+      if (currentMatchData.current) {
+        EventBus.emit("init-match", currentMatchData.current);
+      }
+    };
+
     EventBus.on("engine-ready-with-players", onEngineReady);
+    EventBus.on("request-match-init", onInitRequest);
     
     return () => {
       EventBus.off("engine-ready-with-players", onEngineReady);
+      EventBus.off("request-match-init", onInitRequest);
     };
   }, [validation.valid, matchInProgress]);
 
@@ -165,6 +168,20 @@ export default function MatchPage() {
       EventBus.off("ultimate-ready", onUltimateReady);
     };
   }, [setUltimateReady]);
+
+  // Block refresh during match
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (matchInProgress && !showResultOverlay) {
+        e.preventDefault();
+        e.returnValue = "Partita in corso! Se ricarichi la pagina perderai il match e l'energia spesa.";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [matchInProgress, showResultOverlay]);
 
   useEffect(() => {
     if (matchTick >= totalTicks && matchInProgress) {
@@ -212,15 +229,19 @@ export default function MatchPage() {
   };
 
   return (
-    <div className="fixed inset-0 top-16 lg:top-20 flex flex-col lg:flex-row overflow-hidden z-20 pointer-events-none">
-      {/* 1. ARENA VIEWPORT (Transparent to show MatchOverlay) */}
-      <div className="flex-1 relative flex flex-col overflow-hidden pointer-events-auto">
+    <div className="fixed inset-0 top-16 lg:top-20 flex flex-col bg-[#05070a] overflow-hidden z-20">
+      {/* Stadium Background Atmosphere */}
+      <div className="absolute inset-0 bg-stadium-tactical opacity-[0.1] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#05070a] via-transparent to-[#05070a]/50 pointer-events-none" />
+
+      {/* 1. ARENA VIEWPORT LAYER */}
+      <div className="flex-1 relative flex flex-col overflow-hidden">
         
-        {/* Background Grid Pattern */}
+        {/* Atmosphere Grid */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
-        {/* Broadcast HUD Layer */}
-        <div className="absolute inset-0 z-[50] pointer-events-none">
+        {/* TOP HUD: Scoreboard */}
+        <div className="absolute inset-x-0 top-0 z-[50] pointer-events-none">
           <MatchHeader 
             tick={matchTick}
             totalTicks={totalTicks}
@@ -232,33 +253,193 @@ export default function MatchPage() {
           />
         </div>
 
-        {/* Phase / Momentum Indicator (Floating) */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[50] pointer-events-none">
-          <AnimatePresence mode="wait">
-            {matchInProgress && (
-              <motion.div 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -20, opacity: 0 }}
-                className="px-8 py-3 rounded-2xl bg-black/40 backdrop-blur-3xl border border-white/5 flex items-center gap-6 shadow-[0_15px_40px_rgba(0,0,0,0.4)]"
+        {/* LEFT HUD: Stats */}
+        <div className="absolute left-6 top-32 z-[50] flex flex-col gap-3 pointer-events-none w-44">
+           <motion.div 
+             initial={{ x: -50, opacity: 0 }}
+             animate={{ x: 0, opacity: 1 }}
+             className="glass-premium p-4 rounded-2xl border-white/5 space-y-4 shadow-2xl"
+           >
+              <div className="space-y-2">
+                <div className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">MOMENTUM</div>
+                <div className="flex items-center gap-2">
+                   <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-gold shadow-[0_0_8px_#fbbf24]" style={{ width: '62%' }} />
+                      <div className="h-full bg-rose-500/20" style={{ width: '38%' }} />
+                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">POSSESSO</div>
+                <div className="flex items-center gap-2">
+                   <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-gold shadow-[0_0_8px_#fbbf24]" style={{ width: '58%' }} />
+                      <div className="h-full bg-rose-500/20" style={{ width: '42%' }} />
+                   </div>
+                </div>
+              </div>
+           </motion.div>
+        </div>
+
+        {/* RIGHT HUD: Chronicle & Tactics */}
+        <div className="absolute right-6 top-4 bottom-44 z-[50] flex flex-col gap-4 w-72 pointer-events-none">
+           {/* Chronicle (Top Right) */}
+           <div className="flex-[1.2] min-h-0 pointer-events-auto">
+              <MatchChronicle 
+                events={matchEvents}
+                totalTicks={totalTicks}
+                isSearching={isSearching}
+              />
+           </div>
+
+           {/* Tactics (Bottom Right) */}
+           <div className="flex-1 min-h-0 pointer-events-auto">
+              <TacticalPanel 
+                stance={stance}
+                command={command}
+                matchInProgress={matchInProgress}
+                onStanceChange={handleStanceChange}
+                onCommandChange={setCommand}
+              />
+           </div>
+        </div>
+
+        {/* PHASER VIEWPORT */}
+        <div className="absolute inset-0 z-0 pointer-events-auto">
+           <PhaserGame />
+        </div>
+
+        {/* BOTTOM HUD: Players & Ultimate */}
+        <div className="absolute inset-x-0 bottom-6 z-[50] px-6 pointer-events-none">
+           <div className="flex items-end gap-6 max-w-[1700px] mx-auto">
+              {/* Sostituisci Button */}
+              <button 
+                onClick={() => {
+                  setBenchOpen(!benchOpen);
+                  setSelectedSubId(null);
+                }}
+                className={`pointer-events-auto w-24 aspect-square glass-premium rounded-[2rem] border-white/5 flex flex-col items-center justify-center gap-2 group transition-all mb-2 ${
+                  benchOpen ? "bg-gold/20 border-gold/40 shadow-[0_0_20px_rgba(251,191,36,0.1)]" : "hover:bg-white/5"
+                }`}
               >
-                <div className="flex flex-col items-center gap-1 border-r border-white/10 pr-6">
-                  <span className="text-[8px] font-black text-accent uppercase tracking-[0.3em]">Momentum</span>
-                  <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden flex">
-                    <motion.div 
-                      className="h-full bg-accent shadow-[0_0_10px_#fbbf24]" 
-                      initial={{ width: '50%' }}
-                      animate={{ width: '65%' }} 
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Possesso</span>
-                  <span className="text-xs font-black text-white italic">62%</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                 <span className={`text-2xl transition-transform duration-500 ${benchOpen ? "rotate-180" : ""}`}>🔄</span>
+                 <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em]">{benchOpen ? "CHIUDI" : "CAMBIO"}</span>
+              </button>
+
+              {/* Player Cards Row */}
+              <div className="flex-1 flex gap-2 pointer-events-auto mb-2 relative">
+                 {/* Bench Row (Floating above) */}
+                 <AnimatePresence>
+                   {benchOpen && (
+                     <motion.div 
+                       initial={{ y: 20, opacity: 0 }}
+                       animate={{ y: 0, opacity: 1 }}
+                       exit={{ y: 20, opacity: 0 }}
+                       className="absolute bottom-[calc(100%+1rem)] left-0 right-0 flex gap-2 overflow-x-auto pb-4 px-2 scrollbar-hide z-[100]"
+                     >
+                       {benchPlayers.length === 0 ? (
+                         <div className="glass-premium px-6 py-3 rounded-2xl text-[10px] font-black text-white/20 uppercase tracking-[0.4em] border-white/5">Panchina Vuota</div>
+                       ) : (
+                         benchPlayers.map((p) => (
+                           <button 
+                             key={p.id}
+                             onClick={() => setSelectedSubId(selectedSubId === p.id ? null : p.id)}
+                             className={`relative aspect-[3/4.2] w-20 shrink-0 glass-premium rounded-2xl border transition-all ${
+                               selectedSubId === p.id 
+                                 ? "border-gold ring-4 ring-gold/40 scale-110 z-10 shadow-[0_0_30px_rgba(251,191,36,0.3)]" 
+                                 : "border-white/10 hover:bg-white/10 opacity-80 hover:opacity-100"
+                             }`}
+                           >
+                             <img src={`/assets/portraits/${p.portrait}.png`} className="w-full h-full object-cover" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+                             <div className="absolute bottom-2 inset-x-0 text-[8px] font-black text-white uppercase text-center truncate px-1">{p.name.split(' ')[0]}</div>
+                             <div className="absolute top-2 right-2 text-[10px] font-black text-gold drop-shadow-md">{p.overallRating || 75}</div>
+                             {selectedSubId === p.id && (
+                                <div className="absolute -top-1 -left-1 bg-gold text-black rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">✓</div>
+                             )}
+                           </button>
+                         ))
+                       )}
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+
+                 {lineup.map((slot, i) => {
+                   const player = STARTER_PLAYERS.find(p => p.id === slot.playerId);
+                   if (!player) return null;
+                   const canSub = selectedSubId !== null;
+
+                   return (
+                     <button 
+                       key={slot.playerId} 
+                       onClick={() => {
+                         if (selectedSubId) {
+                           substituteInMatch(slot.playerId, selectedSubId);
+                           setSelectedSubId(null);
+                         }
+                       }}
+                       disabled={!canSub && !benchOpen}
+                       className={`flex-1 glass-premium rounded-2xl border overflow-hidden relative group aspect-[3/4.2] max-w-[160px] transition-all duration-300 ${
+                         canSub ? "border-gold ring-2 ring-gold/20 cursor-pointer scale-[1.02] shadow-[0_0_20px_rgba(251,191,36,0.1)]" : "border-white/10"
+                       }`}
+                     >
+                        <div className="absolute top-2 left-2 z-10 text-[10px] font-black text-white italic">{player.overallRating || 78}</div>
+                        <div className="absolute top-2 right-2 z-10 text-[8px] font-black text-white/40 uppercase">{player.position}</div>
+                        <img src={`/assets/portraits/${player.portrait}.png`} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                        
+                        <AnimatePresence>
+                          {canSub && (
+                             <motion.div 
+                               initial={{ opacity: 0 }}
+                               animate={{ opacity: 1 }}
+                               exit={{ opacity: 0 }}
+                               className="absolute inset-0 bg-gold/30 backdrop-blur-sm flex flex-col items-center justify-center z-20 group-hover:bg-gold/40 transition-colors"
+                             >
+                                <span className="text-3xl drop-shadow-lg">🔄</span>
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest mt-2">SOSTITUISCI</span>
+                             </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        <div className="absolute bottom-2 left-2 right-2 z-10">
+                           <div className="text-[10px] font-black text-white uppercase italic truncate">{player.name}</div>
+                        </div>
+                     </button>
+                   );
+                 })}
+              </div>
+
+              {/* Ultimate Charge (Bottom Right) */}
+              <div className="w-80 glass-premium rounded-3xl border-gold/20 p-4 flex items-center gap-4 pointer-events-auto mb-2 relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gold/5" />
+                 <div className="relative flex flex-col gap-1 flex-1">
+                    <div className="flex items-center gap-2">
+                       <span className="text-gold">⚡</span>
+                       <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">ULTIMATE</span>
+                    </div>
+                    <p className="text-[7px] text-white/30 uppercase tracking-widest leading-none">CARICA CON POSSESSO</p>
+                 </div>
+
+                 <div className="relative w-16 h-16 shrink-0">
+                    <svg className="w-full h-full rotate-[-90deg]">
+                       <circle cx="32" cy="32" r="28" className="stroke-white/5 fill-none stroke-[4]" />
+                       <motion.circle 
+                         cx="32" cy="32" r="28" 
+                         className="stroke-gold fill-none stroke-[4]" 
+                         strokeDasharray="175.8"
+                         animate={{ strokeDashoffset: 175.8 - (175.8 * ultimateCharge) / 100 }}
+                         strokeLinecap="round"
+                       />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                       <span className="text-gold text-xs">⚡</span>
+                       <span className="text-[14px] font-black italic text-white leading-none">{ultimateCharge}%</span>
+                    </div>
+                 </div>
+              </div>
+           </div>
         </div>
 
         {/* 2. LOADING / INTRO OVERLAY */}
@@ -267,7 +448,7 @@ export default function MatchPage() {
             <motion.div 
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[100] bg-[#05070a] flex flex-col items-center justify-center"
+              className="absolute inset-0 z-[100] bg-[#05070a] flex flex-col items-center justify-center pointer-events-auto"
             >
               <div className="relative mb-12">
                  <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full animate-pulse" />
@@ -299,54 +480,6 @@ export default function MatchPage() {
           )}
         </AnimatePresence>
 
-        <div id="phaser-target" className="flex-1 w-full h-full relative z-[5]" />
-      </div>
-
-      {/* 2. SIDEBAR SECTION (FEED & TACTICS) */}
-      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[40vh] lg:h-full border-l border-white/5 pointer-events-auto">
-        {/* Mobile Tab Switcher */}
-        <div className="flex lg:hidden border-b border-white/5">
-          <button 
-            onClick={() => setActiveTab("feed")}
-            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
-              activeTab === "feed" ? "text-accent bg-accent/5 border-b-2 border-accent" : "text-muted"
-            }`}
-          >
-            Feed
-          </button>
-          <button 
-            onClick={() => setActiveTab("tactics")}
-            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
-              activeTab === "tactics" ? "text-accent bg-accent/5 border-b-2 border-accent" : "text-muted"
-            }`}
-          >
-            Tactics
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className={`flex-1 flex flex-col min-h-0 ${activeTab === "tactics" ? "hidden lg:flex" : "flex"}`}>
-            <MatchChronicle 
-              events={matchEvents}
-              totalTicks={totalTicks}
-              isSearching={isSearching}
-            />
-          </div>
-
-          <div className={`${activeTab === "feed" ? "hidden lg:block" : "block"}`}>
-            <TacticalPanel 
-              stance={stance}
-              command={command}
-              ultimateReady={ultimateReady}
-              ultimateCharge={ultimateCharge}
-              matchInProgress={matchInProgress}
-              onStanceChange={handleStanceChange}
-              onCommandChange={setCommand}
-              onActivateUltimate={activateUltimate}
-            />
-          </div>
-        </div>
       </div>
 
       {/* 3. RESULT OVERLAY */}

@@ -131,49 +131,47 @@ export function MenuMusicPlayer() {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-20 left-4 right-4 z-[90] lg:bottom-6 lg:left-auto lg:right-6 lg:w-[380px] cursor-grab active:cursor-grabbing"
+            className="fixed bottom-24 left-4 right-4 z-[90] lg:bottom-10 lg:left-auto lg:right-10 lg:w-[400px] cursor-grab active:cursor-grabbing"
           >
-            <div className="overflow-hidden rounded-[28px] border border-accent/20 bg-[#07111d]/85 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+            <div className="overflow-hidden rounded-[32px] border border-gold/30 bg-[#05070a]/90 shadow-[0_30px_90px_rgba(0,0,0,0.6)] backdrop-blur-3xl">
               <div
-                className="absolute inset-0 opacity-70 pointer-events-none"
+                className="absolute inset-0 opacity-40 pointer-events-none"
                 style={{
                   background:
-                    "radial-gradient(circle at top left, rgba(251,191,36,0.2), transparent 45%), radial-gradient(circle at bottom right, rgba(244,63,94,0.18), transparent 40%)",
+                    "radial-gradient(circle at top left, rgba(255,193,32,0.15), transparent 50%), radial-gradient(circle at bottom right, rgba(6,182,212,0.1), transparent 40%)",
                 }}
               />
 
-              <div className="relative flex items-center gap-3 px-4 py-3 lg:px-5 lg:py-4">
+              <div className="relative flex items-center gap-4 px-5 py-4 lg:px-6 lg:py-5">
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); cycleTrack(-1); }}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
                   aria-label="Traccia precedente"
                 >
-                  <span className="text-lg">⏮</span>
+                  <span className="text-xl">⏮</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={togglePlayback}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-black shadow-[0_0_24px_rgba(251,191,36,0.32)] transition hover:scale-105 active:scale-95"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gold text-black shadow-[0_0_30px_rgba(255,193,32,0.4)] transition hover:scale-105 active:scale-95"
                   aria-label={isPlaying ? "Metti in pausa" : "Riproduci"}
                 >
-                  <span className="text-lg">{isPlaying ? "⏸" : "▶"}</span>
+                  <span className="text-xl">{isPlaying ? "⏸" : "▶"}</span>
                 </button>
 
                 <div className="min-w-0 flex-1 px-1">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-2 w-2 rounded-full bg-accent shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.28em] text-accent/80">
-                        Playlist GOLAZOO
-                      </span>
-                    </div>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className={`inline-flex h-2 w-2 rounded-full bg-gold ${isPlaying ? 'animate-pulse shadow-[0_0_10px_#FFC324]' : 'opacity-40'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
+                      PLAYLIST GOLAZOO
+                    </span>
                   </div>
-                  <div className="truncate text-sm font-black uppercase italic tracking-tight text-white">
+                  <div className="truncate text-sm font-black uppercase italic tracking-tighter text-white">
                     {currentTrack.title}
                   </div>
-                  <div className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+                  <div className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-gold/60">
                     {currentTrack.subtitle}
                   </div>
                 </div>
@@ -182,20 +180,32 @@ export function MenuMusicPlayer() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); cycleTrack(1); }}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 hidden sm:flex"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white hidden sm:flex"
                     aria-label="Traccia successiva"
                   >
-                    <span className="text-lg">⏭</span>
+                    <span className="text-xl">⏭</span>
                   </button>
                   <button
                     type="button"
                     onClick={toggleCollapse}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-accent/30 bg-accent/10 text-accent transition hover:bg-accent/20"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/30 transition hover:bg-white/10 hover:text-white"
                     aria-label="Collassa player"
                   >
                     <span className="text-xs">✕</span>
                   </button>
                 </div>
+              </div>
+              
+              {/* Waveform Visualization (Fake) */}
+              <div className="h-1 w-full bg-white/5 flex items-end px-1 gap-[1px]">
+                 {Array.from({ length: 60 }).map((_, i) => (
+                   <motion.div 
+                     key={i} 
+                     className="flex-1 bg-gold/30"
+                     animate={{ height: isPlaying ? [2, Math.random() * 8 + 2, 2] : 2 }}
+                     transition={{ repeat: Infinity, duration: 0.5 + Math.random() }}
+                   />
+                 ))}
               </div>
             </div>
           </motion.div>

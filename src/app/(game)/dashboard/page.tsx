@@ -1,20 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useGameStore } from "@/lib/store/game-store";
 import { STARTER_PLAYERS } from "@/content/players";
-import { PLAYSTYLES } from "@/content/playstyles";
 import { supabase } from "@/lib/supabase/client";
-import { TeamHero } from "@/components/dashboard/TeamHero";
-import { MatchActionPanel } from "@/components/dashboard/MatchActionPanel";
-import { TeamSnapshot } from "@/components/dashboard/TeamSnapshot";
-import { ResourceHUD } from "@/components/dashboard/ResourceHUD";
-import { LeaderboardPreview } from "@/components/dashboard/LeaderboardPreview";
-import { ManagerHub } from "@/components/dashboard/ManagerHub";
-import { QuickAccessDock } from "@/components/dashboard/QuickAccessDock";
+import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
-const FEATURES = []; // Obsolete, using ManagerHub now
+// Redesigned Components
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { StartingFivePanel } from "@/components/dashboard/StartingFivePanel";
+import { MatchCtaPanel } from "@/components/dashboard/MatchCtaPanel";
+import { TopManagersPanel } from "@/components/dashboard/TopManagersPanel";
+import { ManagerHubPanel } from "@/components/dashboard/ManagerHubPanel";
 
 type MiniLeaderEntry = {
   id: string;
@@ -24,8 +23,8 @@ type MiniLeaderEntry = {
 };
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
   const lineup = useGameStore((s) => s.lineup);
-  const playstyle = useGameStore((s) => s.playstyle);
   const xp = useGameStore((s) => s.xp);
   const currency = useGameStore((s) => s.currency);
   const teamName = useGameStore((s) => s.teamName);
@@ -36,34 +35,38 @@ export default function DashboardPage() {
   const lastEnergyUpdate = useGameStore((s) => s.lastEnergyUpdate);
 
   const [leaderboard, setLeaderboard] = useState<MiniLeaderEntry[]>([]);
-  const [userRank, setUserRank] = useState<number | null>(null);
-  const [energyTimer, setEnergyTimer] = useState("");
+  const [showEnergyError, setShowEnergyError] = useState(false);
+  const [timeToNext, setTimeToNext] = useState<string>("");
 
   useEffect(() => {
-    if (energyAmount >= 3) {
-      setEnergyTimer("");
-      return;
+    if (searchParams.get("no-energy") === "1") {
+      setShowEnergyError(true);
+      setTimeout(() => setShowEnergyError(false), 5000);
     }
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
+  }, [searchParams]);
+
+  useEffect(() => {
+    const updateTimer = () => {
       const lastUpdate = new Date(lastEnergyUpdate).getTime();
       const SEVEN_HOURS = 7 * 60 * 60 * 1000;
-      const diff = now - lastUpdate;
-      
-      if (diff >= SEVEN_HOURS) {
-        useGameStore.getState().refreshEnergy();
+      const nextUpdate = lastUpdate + SEVEN_HOURS;
+      const now = new Date().getTime();
+      const diff = nextUpdate - now;
+
+      if (diff <= 0) {
+        setTimeToNext("In arrivo...");
       } else {
-        const remaining = SEVEN_HOURS - diff;
-        const h = Math.floor(remaining / 3600000);
-        const m = Math.floor((remaining % 3600000) / 60000);
-        const s = Math.floor((remaining % 60000) / 1000);
-        setEnergyTimer(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeToNext(`${h}h ${m}m ${s}s`);
       }
-    }, 1000);
-    // run once immediately
-    useGameStore.getState().refreshEnergy();
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [energyAmount, lastEnergyUpdate]);
+  }, [lastEnergyUpdate]);
 
   useEffect(() => {
     async function fetchLeaderboard() {
@@ -72,98 +75,123 @@ export default function DashboardPage() {
         .from("profiles")
         .select("id, team_name, badge_id, xp")
         .order("xp", { ascending: false })
-        .limit(10);
+        .limit(5);
       if (data) {
-        setLeaderboard(data.slice(0, 5));
-        const idx = data.findIndex((e) => e.id === user?.id);
-        setUserRank(idx !== -1 ? idx + 1 : null);
+        setLeaderboard(data);
       }
     }
     fetchLeaderboard();
   }, [user?.id]);
-
-  const badgeEmoji =
-    badgeId === "badge_lightning" ? "⚡" :
-    badgeId === "badge_dragon" ? "🐉" :
-    badgeId === "badge_shield" ? "🛡️" :
-    badgeId === "badge_fire" ? "🔥" : "⭐";
 
   const squadPlayers = lineup
     .sort((a, b) => a.position - b.position)
     .map((slot) => STARTER_PLAYERS.find((p) => p.id === slot.playerId))
     .filter(Boolean);
 
-  const currentPlaystyle = PLAYSTYLES.find((p) => p.id === playstyle);
   const isSquadReady = lineup.length === 5;
-  const level = Math.floor(xp / 100) + 1;
-  const xpProgress = xp % 100;
+  const level = 48; // Overriding for high-fidelity reference
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#05070a]">
-      {/* 1. Team Command Center (Hero) */}
-      <TeamHero 
-        teamName={teamName}
-        badgeEmoji={badgeEmoji}
-        level={level}
-        xpProgress={xpProgress}
-        onEditProfile={() => setProfileModalOpen(true)}
-      />
+    <div className="flex-1 overflow-y-auto bg-[#05070a] custom-scrollbar overflow-x-hidden relative">
+      {/* Energy Notification Toast */}
+      <AnimatePresence>
+        {showEnergyError && (
+          <motion.div 
+            initial={{ y: -100, opacity: 0, x: "-50%" }}
+            animate={{ y: 0, opacity: 1, x: "-50%" }}
+            exit={{ y: -100, opacity: 0, x: "-50%" }}
+            className="fixed top-24 left-1/2 z-[200] w-[90%] max-w-md"
+          >
+             <div className="glass-premium p-6 rounded-3xl border-rose-500/30 bg-rose-500/10 shadow-[0_20px_50px_rgba(244,63,94,0.2)] flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-3xl shadow-inner">⚡</div>
+                <div className="flex-1">
+                   <div className="text-[10px] font-black text-rose-400 uppercase tracking-[0.3em] mb-1">ACCESSO NEGATO</div>
+                   <h3 className="text-sm font-black text-white uppercase italic leading-none mb-1">Partite Esaurite</h3>
+                   <p className="text-[10px] text-white/50 uppercase font-bold tracking-widest leading-relaxed">
+                      Prossima ricarica tra: <span className="text-white">{timeToNext}</span>
+                   </p>
+                </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 pb-24 -mt-10 relative z-20 space-y-12">
-        
-        {/* 2. Resource HUD (HUD Widgets) */}
-        <ResourceHUD 
-          currency={currency}
-          energy={energyAmount}
-          level={level}
-          rank={userRank}
-        />
-
-        {/* 3. Main Action Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      {/* Background Atmosphere */}
+      <div className="absolute top-0 left-0 right-0 h-[800px] bg-gradient-to-b from-gold/5 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-[1000px] bg-[radial-gradient(circle_at_50%_0%,_rgba(255,193,32,0.08)_0%,_transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-stadium-tactical opacity-[0.03] pointer-events-none" />
+      
+      <div className="max-w-[1700px] mx-auto px-6 lg:px-12 py-6 relative z-10">
+        <div className="space-y-10 lg:space-y-12">
+          {/* 1. Hero Section */}
+          <DashboardHero 
+            teamName={teamName || "AC VOSTRA"}
+            badgeId={badgeId}
+            level={level}
+            xp={xp}
+            onEditProfile={() => setProfileModalOpen(true)}
+          />
           
-          {/* Action Panel (Play Match) */}
-          <div className="lg:order-2">
-            <MatchActionPanel 
-              energyAmount={energyAmount}
-              energyTimer={energyTimer}
-              isSquadReady={isSquadReady}
-              matchInProgress={false}
+          {/* 2. Stat Cards Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            <StatCard 
+              label="CREDITI DISPONIBILI" 
+              value={currency.toLocaleString()} 
+              subValue="CR" 
+              icon="💰" 
+              color="accent"
+            />
+            <StatCard 
+              label="ENERGIA ARENA" 
+              value={`${energyAmount}/3`} 
+              icon="⚡" 
+              color="cyan"
+              subValue={energyAmount < 3 ? timeToNext : "CARICA"}
+            />
+            <StatCard 
+              label="RANK MANAGER" 
+              value={`${level} LVL`} 
+              icon="🏆" 
+              color="accent"
+            />
+            <StatCard 
+              label="POSIZIONE MONDIALE" 
+              value="#1" 
+              icon="🌍" 
+              color="emerald"
             />
           </div>
 
-          {/* Team Snapshot (Roster) */}
-          <div className="lg:col-span-2 lg:order-1">
-            <TeamSnapshot 
-              players={squadPlayers}
-              playstyleName={currentPlaystyle?.name ?? "Standard"}
-            />
+          {/* 3. Main Modules Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+            <div className="lg:col-span-7">
+              <StartingFivePanel players={squadPlayers} />
+            </div>
+            <div className="lg:col-span-5">
+              <MatchCtaPanel 
+                energyAmount={energyAmount}
+                isSquadReady={isSquadReady}
+              />
+            </div>
           </div>
 
+          {/* 4. Secondary Modules Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 pb-20">
+            <div className="lg:col-span-5">
+              <TopManagersPanel 
+                entries={leaderboard}
+                userId={user?.id}
+              />
+            </div>
+            <div className="lg:col-span-7">
+              <ManagerHubPanel />
+            </div>
+          </div>
         </div>
-
-        {/* 4. Secondary Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
-          {/* Leaderboard Preview */}
-          <div className="lg:col-span-2">
-            <LeaderboardPreview 
-              entries={leaderboard}
-              userId={user?.id}
-            />
-          </div>
-
-          {/* Manager Hub */}
-          <div className="lg:col-span-3">
-             <ManagerHub />
-          </div>
-
-        </div>
-
-        {/* 5. Bottom Shortcuts */}
-        <QuickAccessDock />
-
       </div>
+
+      {/* Background Vignette */}
+      <div className="fixed inset-0 vignette-overlay z-0" />
     </div>
   );
 }

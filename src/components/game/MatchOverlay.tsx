@@ -140,10 +140,10 @@ export function MatchOverlay() {
 
   return (
     <div 
-      className={`fixed transition-all ${
+      className={`fixed ${
         isMatchPage 
           ? `bg-[radial-gradient(circle_at_center,_#0a162d_0%,_#05070a_100%)] pointer-events-none ${isMatchEnded ? 'opacity-0 -z-10' : 'z-[10]'}`
-          : "w-72 h-44 rounded-3xl border-2 border-accent/40 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.05] active:scale-[0.95] z-[200]"
+          : "transition-all w-72 h-44 rounded-3xl border-2 border-accent/40 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.05] active:scale-[0.95] z-[200]"
       }`}
       style={isMatchPage && arenaRect ? {
         top: arenaRect.top,
