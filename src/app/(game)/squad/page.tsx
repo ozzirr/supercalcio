@@ -14,7 +14,7 @@ import { SquadMobilePreview } from "@/components/squad/SquadMobilePreview";
 import { PlayerDetailModal } from "@/components/squad/player-detail-modal";
 
 import { PLAYSTYLES } from "@/content/playstyles";
-import { validateSquad } from "@/types/squad";
+import { validateSquad, type Playstyle } from "@/types/squad";
 import type { PlayerDefinition } from "@/types/player";
 import type { LineupSlot } from "@/types/squad";
 
@@ -173,7 +173,7 @@ export default function SquadPage() {
           <PlayStyleSelector 
             playstyles={PLAYSTYLES}
             selectedId={playstyle}
-            onSelect={setPlaystyle}
+            onSelect={(id) => setPlaystyle(id as Playstyle)}
           />
         </div>
       </div>
