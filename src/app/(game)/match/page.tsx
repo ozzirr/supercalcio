@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/lib/store/game-store";
-import { validateSquad } from "@/types/squad";
+import { validateSquad, type Playstyle } from "@/types/squad";
 import { MatchEngine } from "@/engine/match-engine";
 import { generateSeed } from "@/engine/random";
 import { formatMatchEvent, tickToMatchTime } from "@/utils/formatting";
@@ -83,7 +83,7 @@ export default function MatchPage() {
       let awayRoster: any[] = [];
       let awayName = opponentInfo?.name || "Rival Tech";
       let awayBadge = opponentInfo?.badge || "badge_lightning";
-      let awayPlaystyle = opponentInfo?.playstyle || "balanced";
+      let awayPlaystyle: Playstyle = opponentInfo?.playstyle || "possession_control";
 
       if (opponentInfo?.roster) {
         awayRoster = opponentInfo.roster;
