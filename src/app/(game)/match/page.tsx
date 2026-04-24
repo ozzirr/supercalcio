@@ -54,6 +54,13 @@ export default function MatchPage() {
 
     async function setupMatch() {
       if (!supabase) return;
+      
+      const success = await useGameStore.getState().consumeEnergy();
+      if (!success) {
+        // Just send them back to dashboard if they got here illegally
+        router.push("/dashboard");
+        return;
+      }
 
       const { data: userAuth } = await supabase.auth.getUser();
       
@@ -121,11 +128,10 @@ export default function MatchPage() {
       startGlobalMatch(engine, { name: awayName, badge: awayBadge, playstyle: awayPlaystyle });
 
       // Trigger pre-match presentation
-      const homeName = useGameStore.getState().teamName || useGameStore.getState().username || "GIOOL FC";
+      const homeName = useGameStore.getState().teamName || useGameStore.getState().username || "GOLAZOO FC";
       speechEngine.announcePresentation(homeName, awayName);
 
       setTimeout(() => {
-        matchAudio.play("whistle");
         EventBus.emit("init-match", {
           homeRoster,
           awayRoster,
@@ -133,11 +139,19 @@ export default function MatchPage() {
           kitId: useGameStore.getState().equippedKit,
           badgeId: useGameStore.getState().badgeId
         });
-        setIsSearching(false);
-      }, 1500);
+      }, 2500);
     }
 
     setupMatch();
+
+    const onEngineReady = () => {
+      setIsSearching(false);
+    };
+    EventBus.on("engine-ready-with-players", onEngineReady);
+    
+    return () => {
+      EventBus.off("engine-ready-with-players", onEngineReady);
+    };
   }, [validation.valid, matchInProgress]);
 
   useEffect(() => {
@@ -158,7 +172,7 @@ export default function MatchPage() {
         setShowResultOverlay(true);
         
         // Trigger final result announcement
-        const homeName = useGameStore.getState().teamName || "GIOOL FC";
+        const homeName = useGameStore.getState().teamName || "GOLAZOO FC";
         const awayName = opponentInfo?.name || "CPU";
         speechEngine.announceMatchEnd(homeName, awayName, matchScore.home, matchScore.away);
 
@@ -198,61 +212,98 @@ export default function MatchPage() {
   };
 
   return (
-    <div className="fixed inset-0 top-[57px] flex flex-col lg:flex-row overflow-hidden bg-[#05070a]">
-      {/* 1. ARENA VIEWPORT */}
-      <div className="flex-1 relative flex flex-col overflow-hidden">
+    <div className="fixed inset-0 top-16 lg:top-20 flex flex-col lg:flex-row overflow-hidden z-20 pointer-events-none">
+      {/* 1. ARENA VIEWPORT (Transparent to show MatchOverlay) */}
+      <div className="flex-1 relative flex flex-col overflow-hidden pointer-events-auto">
+        
+        {/* Background Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
         {/* Broadcast HUD Layer */}
-        <MatchHeader 
-          tick={matchTick}
-          totalTicks={totalTicks}
-          score={matchScore}
-          opponentName={opponentInfo?.name || "CPU"}
-          opponentPlaystyle={opponentInfo?.playstyle || "Standard"}
-          isSearching={isSearching}
-          matchInProgress={matchInProgress}
-        />
+        <div className="absolute inset-0 z-[50] pointer-events-none">
+          <MatchHeader 
+            tick={matchTick}
+            totalTicks={totalTicks}
+            score={matchScore}
+            opponentName={opponentInfo?.name || "CPU"}
+            opponentPlaystyle={opponentInfo?.playstyle || "Standard"}
+            isSearching={isSearching}
+            matchInProgress={matchInProgress}
+          />
+        </div>
 
         {/* Phase / Momentum Indicator (Floating) */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[50] pointer-events-none">
           <AnimatePresence mode="wait">
             {matchInProgress && (
               <motion.div 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -20, opacity: 0 }}
-                className="px-6 py-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center gap-4 shadow-2xl"
+                className="px-8 py-3 rounded-2xl bg-black/40 backdrop-blur-3xl border border-white/5 flex items-center gap-6 shadow-[0_15px_40px_rgba(0,0,0,0.4)]"
               >
-                <div className="flex items-center gap-2 border-r border-white/10 pr-4">
-                  <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em]">Momentum</span>
-                  <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden flex">
-                    <div className="h-full bg-accent shadow-[0_0_8px_#fbbf24]" style={{ width: '65%' }} />
-                    <div className="h-full bg-rose-500 opacity-30" style={{ width: '35%' }} />
+                <div className="flex flex-col items-center gap-1 border-r border-white/10 pr-6">
+                  <span className="text-[8px] font-black text-accent uppercase tracking-[0.3em]">Momentum</span>
+                  <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden flex">
+                    <motion.div 
+                      className="h-full bg-accent shadow-[0_0_10px_#fbbf24]" 
+                      initial={{ width: '50%' }}
+                      animate={{ width: '65%' }} 
+                    />
                   </div>
                 </div>
-                <div className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">
-                  Possesso: <span className="text-accent">62%</span>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Possesso</span>
+                  <span className="text-xs font-black text-white italic">62%</span>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* The Phaser Instance Placeholder */}
-        {/* Phaser is rendered by MatchOverlay in a layer above this, but we keep the space */}
-        <div className="flex-1 bg-gradient-to-b from-[#0a162d] to-[#05070a]">
-           {/* This background is visible before Phaser loads */}
-           {isSearching && (
-             <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
-                <p className="text-xs text-accent font-black uppercase tracking-[0.3em] animate-pulse">Sincronizzazione Arena...</p>
-             </div>
-           )}
-        </div>
+        {/* 2. LOADING / INTRO OVERLAY */}
+        <AnimatePresence>
+          {isSearching && (
+            <motion.div 
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[100] bg-[#05070a] flex flex-col items-center justify-center"
+            >
+              <div className="relative mb-12">
+                 <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full animate-pulse" />
+                 <img src="/assets/logo.png" alt="GOLAZOO" className="h-40 relative z-10" />
+              </div>
+
+              <div className="flex items-center gap-12 lg:gap-24 mb-16">
+                 <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl">🛡️</div>
+                    <span className="font-black italic uppercase text-lg lg:text-2xl text-white tracking-tighter w-32 truncate">{useGameStore.getState().teamName || "TU"}</span>
+                 </div>
+                 <div className="text-3xl lg:text-5xl font-black italic text-accent/40">VS</div>
+                 <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-4xl lg:text-6xl shadow-2xl">🔴</div>
+                    <span className="font-black italic uppercase text-lg lg:text-2xl text-white tracking-tighter w-32 truncate">{opponentInfo?.name || "RIVALE"}</span>
+                 </div>
+              </div>
+
+              <div className="space-y-4 text-center">
+                 <div className="flex items-center justify-center gap-3">
+                    <div className="w-5 h-5 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                    <span className="text-[10px] lg:text-xs text-accent font-black uppercase tracking-[0.4em] animate-pulse">Sincronizzazione Arena...</span>
+                 </div>
+                 <p className="text-[9px] text-muted font-black uppercase tracking-widest max-w-[200px] leading-relaxed opacity-60">
+                    Caricamento engine di gioco e modelli atleti in corso
+                 </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div id="phaser-target" className="flex-1 w-full h-full relative z-[5]" />
       </div>
 
       {/* 2. SIDEBAR SECTION (FEED & TACTICS) */}
-      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[40vh] lg:h-full border-l border-white/5">
+      <div className="w-full lg:w-[384px] shrink-0 flex flex-col bg-surface shadow-[-20px_0_40px_rgba(0,0,0,0.4)] z-30 overflow-hidden h-[40vh] lg:h-full border-l border-white/5 pointer-events-auto">
         {/* Mobile Tab Switcher */}
         <div className="flex lg:hidden border-b border-white/5">
           <button 
@@ -315,7 +366,7 @@ export default function MatchPage() {
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="relative z-10 max-w-2xl w-full text-center space-y-12"
+              className="relative z-10 max-w-2xl w-full text-center space-y-12 pt-24 lg:pt-32"
             >
               <div className="space-y-4">
                 <motion.div 

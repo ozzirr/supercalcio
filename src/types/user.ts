@@ -7,6 +7,10 @@ export type UserProfile = {
   xp: number;
   currency: number;
   level: number;
+  energy_amount: number;
+  last_energy_update: string;
+  current_streak: number;
+  last_login_date: string;
   createdAt: string;
 };
 

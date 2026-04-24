@@ -4,18 +4,33 @@ import { useEffect, useRef } from "react";
 import * as Phaser from "phaser";
 import { MatchScene } from "@/game/MatchScene";
 import { EventBus } from "@/game/EventBus";
+import { useGameStore } from "@/lib/store/game-store";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
+    const setEngineReady = useGameStore.getState().setEngineReady;
+
+    const onSceneReady = () => {
+      console.log("DEBUG: Phaser Scene Created");
+    };
+
+    const onEngineReady = () => {
+      console.log("DEBUG: Match Engine Ready with Players");
+      setEngineReady(true);
+    };
+
+    EventBus.on("current-scene-ready", onSceneReady);
+    EventBus.on("engine-ready-with-players", onEngineReady);
+
     // Ensure we only initialize once
     if (!gameRef.current) {
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.AUTO,
         parent: "phaser-container",
-        width: 800,
-        height: 400,
+        width: 1000,
+        height: 600,
         backgroundColor: "#0a0f18",
         scene: [MatchScene],
         physics: {
@@ -27,8 +42,8 @@ export default function PhaserGame() {
         scale: {
           mode: Phaser.Scale.FIT,
           autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: 800,
-          height: 400,
+          width: 1000,
+          height: 600,
         },
       };
 
@@ -36,6 +51,9 @@ export default function PhaserGame() {
     }
 
     return () => {
+      EventBus.off("current-scene-ready", onSceneReady);
+      EventBus.off("engine-ready-with-players", onEngineReady);
+      
       // Clean up game instance when unmounting
       if (gameRef.current) {
         gameRef.current.destroy(true);
@@ -44,5 +62,5 @@ export default function PhaserGame() {
     };
   }, []);
 
-  return <div id="phaser-container" className="w-full h-full rounded-xl overflow-hidden" />;
+  return <div id="phaser-container" className="w-full h-full overflow-hidden" />;
 }

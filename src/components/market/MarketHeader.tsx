@@ -23,7 +23,7 @@ export function MarketHeader() {
             LIVE TRANSFER HUB
           </div>
           <h1 className="text-4xl lg:text-6xl font-black uppercase tracking-tighter italic leading-none">
-            Mercato <span className="text-accent">GIOOL</span>
+            Mercato <span className="text-accent">GOLAZOO</span>
           </h1>
           <p className="text-muted text-xs lg:text-sm font-medium tracking-tight max-w-md">
             Scout, acquista e vendi i migliori talenti della Serie A per dominare l'arena.

@@ -73,9 +73,9 @@ export default function LoginPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
             Accesso Autorizzato
           </div>
-          <h1 className="text-6xl lg:text-8xl font-black uppercase tracking-tighter leading-none italic mb-4 drop-shadow-2xl">
-            GI<span className="text-accent">OOL</span>
-          </h1>
+          <div className="mb-6">
+            <img src="/assets/logo.png" alt="GOLAZOO" className="h-24 lg:h-32 w-auto object-contain drop-shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform" />
+          </div>
           <p className="text-lg lg:text-xl text-foreground/70 font-medium tracking-tight max-w-md leading-relaxed">
             Il simulatore tattico definitivo. Crea la tua rosa, domina il mercato e conquista l'arena globale.
           </p>
@@ -121,9 +121,9 @@ export default function LoginPage() {
         
         {/* Mobile Header */}
         <div className="md:hidden mb-10 text-center">
-          <h1 className="text-5xl font-black italic tracking-tighter mb-2">
-            GI<span className="text-accent">OOL</span>
-          </h1>
+          <div className="mb-4 flex justify-center">
+            <img src="/assets/logo.png" alt="GOLAZOO" className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]" />
+          </div>
           <p className="text-[10px] uppercase tracking-widest text-muted font-bold">Terminal Access</p>
         </div>
 
@@ -156,7 +156,7 @@ export default function LoginPage() {
                     type="email"
                     required
                     className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-foreground text-sm font-bold placeholder:text-muted/50 focus:outline-none focus:border-accent/50 focus:bg-white/10 transition-all"
-                    placeholder="manager@giool.com"
+                    placeholder="manager@golazoo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />

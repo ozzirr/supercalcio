@@ -12,8 +12,10 @@ CREATE TABLE public.profiles (
   xp integer DEFAULT 0,
   currency integer DEFAULT 100,
   purchased_items text[] DEFAULT '{}',
-  matches_played_today integer DEFAULT 0,
-  last_match_date date DEFAULT CURRENT_DATE,
+  energy_amount integer DEFAULT 3,
+  last_energy_update timestamp with time zone DEFAULT now(),
+  current_streak integer DEFAULT 1,
+  last_login_date date DEFAULT CURRENT_DATE,
   created_at timestamp with time zone DEFAULT now()
 );
 

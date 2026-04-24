@@ -41,12 +41,19 @@ type GameState = {
   equippedStadium: string;
   equippedKit: string;
   ownedPlayers: any[]; // User's roster with levels and bonuses
+  energyAmount: number;
+  lastEnergyUpdate: string;
+  currentStreak: number;
+  lastLoginDate: string;
+  hasUnclaimedDailyReward: boolean;
   isProfileModalOpen: boolean;
   isMuted: boolean;
   ultimateReady: boolean;
+  engineReady: boolean;
   setProfileModalOpen: (open: boolean) => void;
   setMuted: (muted: boolean) => void;
   setUltimateReady: (ready: boolean) => void;
+  setEngineReady: (ready: boolean) => void;
   activateUltimate: () => void;
   claimStarterPack: () => Promise<any[]>;
   resetRoster: () => Promise<void>;
@@ -83,6 +90,10 @@ type GameState = {
   clearMatchState: () => void;
   equipItem: (itemId: string) => Promise<void>;
   syncRoster: () => Promise<void>;
+  refreshEnergy: () => void;
+  consumeEnergy: () => Promise<boolean>;
+  checkDailyReward: () => void;
+  claimDailyReward: () => Promise<any>;
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -113,12 +124,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   equippedStadium: "stadium_default",
   equippedKit: "kit_default",
   ownedPlayers: [],
+  energyAmount: 3,
+  lastEnergyUpdate: new Date().toISOString(),
+  currentStreak: 1,
+  lastLoginDate: new Date().toISOString(),
+  hasUnclaimedDailyReward: false,
   isProfileModalOpen: false,
   isMuted: false,
   ultimateReady: false,
+  engineReady: false,
   setProfileModalOpen: (open) => set({ isProfileModalOpen: open }),
   setMuted: (muted) => set({ isMuted: muted }),
   setUltimateReady: (ready) => set({ ultimateReady: ready }),
+  setEngineReady: (ready) => set({ engineReady: ready }),
   activateUltimate: () => {
     const { ultimateReady } = get();
     if (!ultimateReady) return;
@@ -337,8 +355,15 @@ export const useGameStore = create<GameState>((set, get) => ({
               badgeId: profile.badge_id || "badge_lightning",
               equippedStadium: profile.equipped_stadium || "stadium_default",
               equippedKit: profile.equipped_kit || "kit_default",
-              purchasedItems: profile.purchased_items || []
+              purchasedItems: profile.purchased_items || [],
+              energyAmount: profile.energy_amount ?? 3,
+              lastEnergyUpdate: profile.last_energy_update || new Date().toISOString(),
+              currentStreak: profile.current_streak ?? 1,
+              lastLoginDate: profile.last_login_date || new Date().toISOString(),
             });
+            // Immediately refresh energy logic and check daily login
+            get().refreshEnergy();
+            get().checkDailyReward();
             // Immediately sync roster after loading profile currency/items
             get().syncRoster();
           } else if (data.session?.user) {
@@ -659,7 +684,142 @@ export const useGameStore = create<GameState>((set, get) => ({
       matchEvents: [],
       matchEngine: null,
       matchInterval: null,
-      opponentInfo: null
+      opponentInfo: null,
+      engineReady: false
     });
+  },
+
+  refreshEnergy: () => {
+    const state = get();
+    if (state.energyAmount >= 3) return;
+
+    const now = new Date().getTime();
+    const lastUpdate = new Date(state.lastEnergyUpdate).getTime();
+    const SEVEN_HOURS = 7 * 60 * 60 * 1000;
+    
+    const diff = now - lastUpdate;
+    if (diff >= SEVEN_HOURS) {
+      const recovered = Math.floor(diff / SEVEN_HOURS);
+      const newEnergy = Math.min(3, state.energyAmount + recovered);
+      
+      let newUpdateTime = state.lastEnergyUpdate;
+      if (newEnergy < 3) {
+        newUpdateTime = new Date(lastUpdate + recovered * SEVEN_HOURS).toISOString();
+      } else {
+        newUpdateTime = new Date().toISOString();
+      }
+
+      set({ energyAmount: newEnergy, lastEnergyUpdate: newUpdateTime });
+      
+      if (state.user && supabase) {
+        supabase.from('profiles').update({ 
+          energy_amount: newEnergy, 
+          last_energy_update: newUpdateTime 
+        }).eq('id', state.user.id).then();
+      }
+    }
+  },
+
+  consumeEnergy: async () => {
+    const state = get();
+    get().refreshEnergy(); // Ensure it's up to date
+    
+    const freshState = get();
+    if (freshState.energyAmount <= 0) return false;
+
+    const newEnergy = freshState.energyAmount - 1;
+    // If it was full, start the timer from NOW
+    const newUpdateTime = freshState.energyAmount === 3 ? new Date().toISOString() : freshState.lastEnergyUpdate;
+
+    set({ energyAmount: newEnergy, lastEnergyUpdate: newUpdateTime });
+
+    if (freshState.user && supabase) {
+      await supabase.from('profiles').update({
+        energy_amount: newEnergy,
+        last_energy_update: newUpdateTime
+      }).eq('id', freshState.user.id);
+    }
+    return true;
+  },
+
+  checkDailyReward: () => {
+    const state = get();
+    // Compare dates (ignore time)
+    const lastLogin = new Date(state.lastLoginDate);
+    const now = new Date();
+    
+    // Set time to 00:00:00 to compare strictly by day
+    lastLogin.setHours(0, 0, 0, 0);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = Math.abs(today.getTime() - lastLogin.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 1) {
+      // User hasn't claimed today
+      let newStreak = state.currentStreak;
+      if (diffDays > 1) {
+        // Missed a day
+        newStreak = 1;
+      } else {
+        // Next consecutive day
+        if (state.currentStreak >= 7) {
+          newStreak = 1; // reset after 7 days
+        } else {
+          newStreak = state.currentStreak + 1;
+        }
+      }
+      set({ hasUnclaimedDailyReward: true, currentStreak: newStreak });
+    }
+  },
+
+  claimDailyReward: async () => {
+    const state = get();
+    if (!state.hasUnclaimedDailyReward || !state.user || !supabase) return null;
+
+    let rewardText = "";
+    let packReward = null;
+    let extraCurrency = 0;
+
+    switch (state.currentStreak) {
+      case 1: extraCurrency = 100; rewardText = "100 CR"; break;
+      case 2: extraCurrency = 300; rewardText = "300 CR"; break;
+      case 3: 
+        const starterPacks = await get().buyPack('starter'); 
+        packReward = starterPacks[0] || null;
+        rewardText = "Pacchetto Giocatore";
+        break;
+      case 4: extraCurrency = 500; rewardText = "500 CR"; break;
+      case 5: extraCurrency = 1000; rewardText = "1.000 CR"; break;
+      case 6: extraCurrency = 2000; rewardText = "2.000 CR"; break;
+      case 7: 
+        const premiumPacks = await get().buyPack('premium');
+        packReward = premiumPacks[0] || null;
+        rewardText = "Pacchetto Leggendario";
+        break;
+      default: extraCurrency = 100; rewardText = "100 CR"; break;
+    }
+
+    // Wait, buyPack deducts currency! We need to refund it if it was a reward.
+    if (state.currentStreak === 3) extraCurrency += 500; // refund starter pack cost
+    if (state.currentStreak === 7) extraCurrency += 1500; // refund premium pack cost
+
+    if (extraCurrency > 0) {
+      get().addRewards(0, extraCurrency); // addRewards syncs to DB
+    }
+
+    const todayStr = new Date().toISOString();
+    set({ 
+      hasUnclaimedDailyReward: false, 
+      lastLoginDate: todayStr
+    });
+
+    await supabase.from('profiles').update({
+      current_streak: state.currentStreak,
+      last_login_date: todayStr
+    }).eq('id', state.user.id);
+
+    return { type: packReward ? 'pack' : 'currency', text: rewardText, player: packReward };
   }
 }));

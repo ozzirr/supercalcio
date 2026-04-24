@@ -436,6 +436,11 @@ export class MatchScene extends Phaser.Scene {
     this.ultimateCharge = 0;
     EventBus.emit("ultimate-update", 0);
 
+    // Signal that the engine is fully loaded with players
+    this.time.delayedCall(500, () => {
+      EventBus.emit("engine-ready-with-players");
+    });
+
     matchAudio.play("whistle");
   }
 

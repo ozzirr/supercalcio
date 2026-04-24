@@ -95,23 +95,68 @@ export function MatchOverlay() {
     router.push("/match");
   };
 
+  const [arenaRect, setArenaRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
+
+  useEffect(() => {
+    if (!isMatchPage) {
+      setArenaRect(null);
+      return;
+    }
+
+    const target = document.getElementById("phaser-target");
+    if (!target) return;
+
+    const update = () => {
+      const rect = target.getBoundingClientRect();
+      setArenaRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      });
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(target);
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isMatchPage, pathname]);
+
   if (!shouldShow) return null;
 
   // If we are ON the match page, we render the game in a specific way or not at all (if the page renders it)
   // ARCHITECTURE CHOICE: To keep Phaser persistent, it MUST stay in this overlay.
   // So the /match page will be empty of PhaserGame, and this overlay will expand to fill the container there.
 
+  // When on match page and the match is over (matchTick >= 90), we hide the overlay to let the ResultOverlay show.
+  const isMatchEnded = isMatchPage && matchTick >= 90;
+
   return (
     <div 
-      className={`fixed z-[200] transition-all duration-300 ${
+      className={`fixed transition-all ${
         isMatchPage 
-          ? "top-[57px] left-0 right-0 bottom-[40vh] lg:bottom-0 lg:right-[384px] pointer-events-none" 
-          : "w-64 h-40 rounded-2xl border-2 border-accent/30 bg-black shadow-2xl overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.02] active:scale-[0.98]"
+          ? `bg-[radial-gradient(circle_at_center,_#0a162d_0%,_#05070a_100%)] pointer-events-none ${isMatchEnded ? 'opacity-0 -z-10' : 'z-[10]'}`
+          : "w-72 h-44 rounded-3xl border-2 border-accent/40 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.05] active:scale-[0.95] z-[200]"
       }`}
-      style={!isMatchPage ? {
+      style={isMatchPage && arenaRect ? {
+        top: arenaRect.top,
+        left: arenaRect.left,
+        width: arenaRect.width,
+        height: arenaRect.height,
+        borderRadius: '0px',
+        transition: 'none'
+      } : !isMatchPage ? {
         left: `${pos.x}px`,
         top: `${pos.y}px`,
-        transition: isDragging ? "none" : "all 0.3s ease"
+        transition: isDragging ? "none" : "all 0.3s ease",
+        borderRadius: '24px'
       } : {}}
       onMouseDown={handleMouseDown}
       onClick={handlePiPClick}

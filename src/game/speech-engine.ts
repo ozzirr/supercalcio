@@ -151,7 +151,7 @@ class SpeechEngine {
       const phrases = [
         `TRIPLICE FISCHIO! Vittoria straordinaria per ${homeName}! Un risultato finale di ${homeScore} a ${awayScore} che premia una prestazione leggendaria!`,
         `FINISCE QUI! ${homeName} domina e vince ${homeScore} a ${awayScore}. I tifosi sono in estasi per questo trionfo assoluto!`,
-        `GIOOL! Match incredibile, ${homeName} porta a casa i tre punti vincendo per ${homeScore} a ${awayScore}. Una lezione di calcio!`
+        `GOLAZOO! Match incredibile, ${homeName} porta a casa i tre punti vincendo per ${homeScore} a ${awayScore}. Una lezione di calcio!`
       ];
       text = phrases[Math.floor(Math.random() * phrases.length)];
     } else if (isDraw) {
@@ -164,7 +164,7 @@ class SpeechEngine {
       const phrases = [
         `TRIPLICE FISCHIO! Sconfitta amara per ${homeName}, ${awayName} vince per ${awayScore} a ${homeScore}. Bisognerà lavorare sodo per rialzarsi!`,
         `FINISCE QUI! ${awayName} sbanca l'Arena battendo ${homeName} per ${awayScore} a ${homeScore}. Una serata difficile da dimenticare.`,
-        `GIOOL! Cala il sipario, ${homeName} cade sotto i colpi di ${awayName}. Il tabellino dice ${homeScore} a ${awayScore}.`
+        `GOLAZOO! Cala il sipario, ${homeName} cade sotto i colpi di ${awayName}. Il tabellino dice ${homeScore} a ${awayScore}.`
       ];
       text = phrases[Math.floor(Math.random() * phrases.length)];
     }

@@ -1,7 +1,7 @@
-# GIOOL Development Guidelines
+# GOLAZOO Development Guidelines
 
 ## 🚀 Overview
-GIOOL is a high-fidelity football management simulator built with Next.js 16 and Phaser 4. It features a tactical simulation engine, an immersive Match 2.0 visual overhaul, and integrated Supabase SSR authentication.
+GOLAZOO is a high-fidelity football management simulator built with Next.js 16 and Phaser 4. It features a tactical simulation engine, an immersive Match 2.0 visual overhaul, and integrated Supabase SSR authentication.
 
 ## 🛠 Tech Stack
 - **Framework**: Next.js 16 (App Router)

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GIOOL",
+  title: "GOLAZOO",
   description: "Fantasy football strategy game",
 };
 
