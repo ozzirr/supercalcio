@@ -24,7 +24,7 @@ type GameState = {
   matchEvents: MatchEvent[];
   matchEngine: any | null;
   matchInterval: NodeJS.Timeout | null;
-  opponentInfo: { name: string; badge: string; playstyle: string } | null;
+  opponentInfo: { name: string; badge: string; playstyle: string; roster?: PlayerDefinition[] } | null;
   matchRosters: { home: PlayerDefinition[]; away: PlayerDefinition[] } | null;
   
   // HUD states
@@ -61,7 +61,7 @@ type GameState = {
   buyPack: (packType: "starter" | "premium") => Promise<any[]>;
 
   // Global Match Lifecycle
-  startGlobalMatch: (engine: any, opponent: { name: string; badge: string; playstyle: string }) => void;
+  startGlobalMatch: (engine: any, opponent: { name: string; badge: string; playstyle: string; roster?: PlayerDefinition[] }) => void;
   tickGlobalMatch: () => void;
   stopGlobalMatch: () => void;
   finishMatchAndSave: () => Promise<void>;
