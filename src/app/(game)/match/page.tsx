@@ -9,6 +9,7 @@ import { MatchEngine } from "@/engine/match-engine";
 import { generateSeed } from "@/engine/random";
 import { formatMatchEvent, tickToMatchTime } from "@/utils/formatting";
 import { STARTER_PLAYERS } from "@/content/players";
+import type { PlayerDefinition } from "@/types/player";
 import { useRouter } from "next/navigation";
 import { EventBus } from "@/game/EventBus";
 import { matchAudio } from "@/game/match-audio";
@@ -17,17 +18,16 @@ import { supabase } from "@/lib/supabase/client";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchChronicle } from "@/components/match/MatchChronicle";
 import { TacticalPanel } from "@/components/match/TacticalPanel";
-import PhaserGame from "@/components/game/PhaserGame";
 import { motion, AnimatePresence } from "framer-motion";
 
-const getPlayerOVR = (p: any) => {
+const getPlayerOVR = (p: PlayerDefinition | undefined) => {
   if (!p) return 0;
   const s = p.stats;
   if (!s) return 0;
   return Math.round((s.pace + s.shooting + s.passing + s.defense + s.physical) / 5);
 };
 
-const getPositionLabel = (p: any) => {
+const getPositionLabel = (p: PlayerDefinition | undefined) => {
   if (!p || !p.roleTags || p.roleTags.length === 0) return "FLEX";
   const role = p.roleTags[0];
   if (role === "goalkeeper") return "GK";
@@ -325,9 +325,7 @@ export default function MatchPage() {
         </div>
 
         {/* PHASER VIEWPORT */}
-        <div className="absolute inset-0 z-0 pointer-events-auto">
-           <PhaserGame />
-        </div>
+        <div id="phaser-target" className="absolute inset-0 z-0 pointer-events-auto" />
 
         {/* BOTTOM HUD: Players & Ultimate */}
         <div className="absolute inset-x-0 bottom-6 z-[50] px-6 pointer-events-none">
@@ -338,7 +336,7 @@ export default function MatchPage() {
                   setBenchOpen(!benchOpen);
                   setSelectedSubId(null);
                 }}
-                className={`pointer-events-auto w-24 aspect-square glass-premium rounded-[2rem] border-white/5 flex flex-col items-center justify-center gap-2 group transition-all mb-2 ${
+                className={`pointer-events-auto w-18 aspect-square glass-premium rounded-[1.5rem] border-white/5 flex flex-col items-center justify-center gap-1 group transition-all mb-2 ${
                   benchOpen ? "bg-gold/20 border-gold/40 shadow-[0_0_20px_rgba(251,191,36,0.1)]" : "hover:bg-white/5"
                 }`}
               >
@@ -364,7 +362,7 @@ export default function MatchPage() {
                            <button 
                              key={p.id}
                              onClick={() => setSelectedSubId(selectedSubId === p.id ? null : p.id)}
-                             className={`relative aspect-[3/4.2] w-20 shrink-0 glass-premium rounded-2xl border transition-all ${
+                             className={`relative aspect-[3/3.8] w-16 shrink-0 glass-premium rounded-xl border transition-all ${
                                selectedSubId === p.id 
                                  ? "border-gold ring-4 ring-gold/40 scale-110 z-10 shadow-[0_0_30px_rgba(251,191,36,0.3)]" 
                                  : "border-white/10 hover:bg-white/10 opacity-80 hover:opacity-100"
@@ -399,7 +397,7 @@ export default function MatchPage() {
                          }
                        }}
                        disabled={!canSub && !benchOpen}
-                       className={`flex-1 glass-premium rounded-2xl border overflow-hidden relative group aspect-[3/4.2] max-w-[160px] transition-all duration-300 ${
+                        className={`flex-1 glass-premium rounded-xl border overflow-hidden relative group aspect-[3/3.8] max-w-[110px] transition-all duration-300 ${
                          canSub ? "border-gold ring-2 ring-gold/20 cursor-pointer scale-[1.02] shadow-[0_0_20px_rgba(251,191,36,0.1)]" : "border-white/10"
                        }`}
                      >

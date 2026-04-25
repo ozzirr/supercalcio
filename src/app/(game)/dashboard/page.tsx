@@ -20,6 +20,7 @@ type MiniLeaderEntry = {
   team_name: string;
   badge_id: string;
   xp: number;
+  custom_badge?: any;
 };
 
 export default function DashboardPage() {
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const currency = useGameStore((s) => s.currency);
   const teamName = useGameStore((s) => s.teamName);
   const badgeId = useGameStore((s) => s.badgeId);
+  const customBadge = useGameStore((s) => s.customBadge);
   const setProfileModalOpen = useGameStore((s) => s.setProfileModalOpen);
   const user = useGameStore((s) => s.user);
   const energyAmount = useGameStore((s) => s.energyAmount);
@@ -73,7 +75,7 @@ export default function DashboardPage() {
       if (!supabase) return;
       const { data } = await supabase
         .from("profiles")
-        .select("id, team_name, badge_id, xp")
+        .select("id, team_name, badge_id, xp, custom_badge")
         .order("xp", { ascending: false })
         .limit(5);
       if (data) {
@@ -127,6 +129,7 @@ export default function DashboardPage() {
           <DashboardHero 
             teamName={teamName || "AC VOSTRA"}
             badgeId={badgeId}
+            customBadge={customBadge}
             level={level}
             xp={xp}
             onEditProfile={() => setProfileModalOpen(true)}

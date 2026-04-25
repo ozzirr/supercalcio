@@ -3,6 +3,7 @@
 import { tickToMatchTime } from "@/utils/formatting";
 import { useGameStore } from "@/lib/store/game-store";
 import { motion, AnimatePresence } from "framer-motion";
+import { BadgeDisplay } from "@/components/profile/badge-display";
 
 interface MatchHeaderProps {
   tick: number;
@@ -23,7 +24,7 @@ export function MatchHeader({
   isSearching,
   matchInProgress
 }: MatchHeaderProps) {
-  const { playstyle, isMuted, setMuted, teamName } = useGameStore();
+  const { playstyle, isMuted, setMuted, teamName, customBadge } = useGameStore();
 
   return (
     <div className="absolute top-4 lg:top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-4xl px-4">
@@ -34,8 +35,12 @@ export function MatchHeader({
           
           {/* HOME TEAM */}
           <div className="flex items-center gap-3 pl-3 pr-4 py-1 bg-white/[0.03] rounded-xl border border-white/5">
-             <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center p-1">
-                <img src="/assets/logo.png" className="w-full h-full object-contain grayscale brightness-200 opacity-60" alt="badge" />
+             <div className="w-10 h-10 lg:w-14 lg:h-14 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                {customBadge ? (
+                  <BadgeDisplay badge={customBadge} size="md" />
+                ) : (
+                  <img src="/assets/logo.png" className="w-full h-full object-contain grayscale brightness-200 opacity-60 p-1" alt="badge" />
+                )}
              </div>
              <div className="flex flex-col">
                 <span className="text-[12px] lg:text-[14px] font-black italic text-white uppercase tracking-tighter leading-none">YOU</span>

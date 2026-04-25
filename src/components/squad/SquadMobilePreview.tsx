@@ -31,7 +31,7 @@ export function SquadMobilePreview() {
             <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl">
                <div className="w-6 h-6 rounded-md bg-gold flex items-center justify-center text-[10px]">🛡️</div>
                <div className="flex-1">
-                  <div className="text-[8px] font-black text-white leading-none">AC VOSTRA <span className="text-gold ml-2">LVL 48</span></div>
+                  <div className="text-[8px] font-black text-white leading-none">AC VOSTRA <span className="text-gold ml-2 uppercase">ELITE SQUAD</span></div>
                   <div className="w-full h-1 bg-white/10 rounded-full mt-1">
                      <div className="w-[72%] h-full bg-gold" />
                   </div>

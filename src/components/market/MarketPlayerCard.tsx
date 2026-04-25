@@ -36,7 +36,7 @@ export function MarketPlayerCard({
       player.stats.goalkeeping
     ) / 6
   );
-  const potential = Math.min(99, overall + (player.tier === "legendary" ? 10 : player.tier === "gold" ? 7 : 4));
+  const influence = Math.min(99, overall + (player.tier === "legendary" ? 15 : player.tier === "gold" ? 10 : 5));
   
   return (
     <div className={`group relative flex flex-col bg-black/40 border border-white/5 rounded-[2rem] overflow-hidden transition-all duration-500 hover:border-accent/30 hover:shadow-[0_0_40px_rgba(251,191,36,0.05)] ${owned ? "opacity-90" : ""}`}>
@@ -75,12 +75,12 @@ export function MarketPlayerCard({
               <span className="text-sm font-black text-white italic">{overall}</span>
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-1.5 border border-white/5 flex flex-col items-center">
-              <span className="text-[8px] text-muted font-black uppercase">POT</span>
-              <span className="text-sm font-black text-white italic">{potential}</span>
+              <span className="text-[8px] text-muted font-black uppercase">INF</span>
+              <span className="text-sm font-black text-white italic">{influence}</span>
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-1.5 border border-white/5 flex flex-col items-center">
-              <span className="text-[8px] text-muted font-black uppercase">XP</span>
-              <span className="text-sm font-black text-accent italic">MAX</span>
+              <span className="text-[8px] text-muted font-black uppercase">TIER</span>
+              <span className="text-sm font-black text-accent italic">{player.tier.slice(0, 3).toUpperCase()}</span>
             </div>
           </div>
         </div>

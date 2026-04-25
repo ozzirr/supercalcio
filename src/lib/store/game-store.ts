@@ -5,6 +5,7 @@ import { SHOP_ITEMS } from "@/content/shop";
 import type { PlayerDefinition } from "@/types/player";
 import type { Playstyle, LineupSlot } from "@/types/squad";
 import type { MatchRecord, TeamStance, TeamCommand, MatchEvent } from "@/types/match";
+import type { CustomBadge } from "@/types/badge";
 import { STARTER_PLAYERS } from "@/content/players";
 import { supabase } from "@/lib/supabase/client";
 
@@ -39,6 +40,7 @@ type GameState = {
   teamName: string;
   username: string;
   badgeId: string;
+  customBadge: CustomBadge | null;
   equippedStadium: string;
   equippedKit: string;
   ownedPlayers: any[]; // User's roster with levels and bonuses
@@ -84,7 +86,7 @@ type GameState = {
   buyPlayer: (playerId: string, cost: number) => Promise<boolean>;
   sellPlayer: (playerId: string, refundAmount: number) => Promise<boolean>;
   upgradePlayer: (playerId: string, stat: string, cost: number) => Promise<boolean>;
-  updateProfile: (updates: { teamName?: string; badgeId?: string; username?: string }) => Promise<void>;
+  updateProfile: (updates: { teamName?: string; badgeId?: string; username?: string; customBadge?: CustomBadge }) => Promise<void>;
   initializeUser: () => void;
   logout: () => void;
   saveSquad: () => Promise<void>;
@@ -124,6 +126,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   teamName: "SC Squad",
   username: "Manager",
   badgeId: "badge_lightning",
+  customBadge: null,
   equippedStadium: "stadium_default",
   equippedKit: "kit_default",
   ownedPlayers: [],
@@ -333,13 +336,28 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     if (!state.user || !supabase) return;
 
+    console.log("DEBUG: Updating profile with:", updates);
     const dbUpdates: any = {};
-    if (updates.teamName) dbUpdates.team_name = updates.teamName;
-    if (updates.badgeId) dbUpdates.badge_id = updates.badgeId;
-    if (updates.username) dbUpdates.username = updates.username;
+    if (updates.teamName !== undefined) dbUpdates.team_name = updates.teamName;
+    if (updates.badgeId !== undefined) dbUpdates.badge_id = updates.badgeId;
+    if (updates.username !== undefined) dbUpdates.username = updates.username;
+    if (updates.customBadge !== undefined) dbUpdates.custom_badge = updates.customBadge;
 
-    set({ ...updates });
-    await supabase.from('profiles').update(dbUpdates).eq('id', state.user.id);
+    const storeUpdates: any = {
+      teamName: updates.teamName ?? state.teamName,
+      badgeId: updates.badgeId ?? state.badgeId,
+      username: updates.username ?? state.username,
+      customBadge: updates.customBadge !== undefined ? updates.customBadge : state.customBadge,
+    };
+    
+    set(storeUpdates);
+    
+    const { error } = await supabase.from('profiles').update(dbUpdates).eq('id', state.user.id);
+    if (error) {
+      console.error("CRITICAL: Profile update failed:", error);
+    } else {
+      console.log("DEBUG: Profile saved successfully.");
+    }
   },
 
   initializeUser: () => {
@@ -348,14 +366,30 @@ export const useGameStore = create<GameState>((set, get) => ({
     supabase.auth.getSession().then(({ data }: { data: { session: { user: any } | null } }) => {
       if (data.session?.user) {
         set({ user: data.session.user });
-        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(async ({ data: profile }: { data: any }) => {
+        supabase.from('profiles').select('*').eq('id', data.session.user.id).single().then(async ({ data: profile, error }: { data: any, error: any }) => {
+          if (error) {
+            console.error("DEBUG: Profile fetch error:", error);
+            return;
+          }
           if (profile) {
-            set({ 
-              xp: profile.xp, 
+            console.log("DEBUG: Initializing user profile:", profile);
+            set({
+              xp: profile.xp,
               currency: profile.currency,
               teamName: profile.team_name || "SC Squad",
               username: profile.username || "Manager",
               badgeId: profile.badge_id || "badge_lightning",
+              customBadge: (typeof profile.custom_badge === 'string' 
+                ? JSON.parse(profile.custom_badge) 
+                : profile.custom_badge) || (profile.badge_id ? {
+                  id: `custom_${profile.badge_id}`,
+                  shape: "shield",
+                  backgroundColor: "#FFC324",
+                  borderColor: "#FFFFFF",
+                  symbol: profile.badge_id.replace('badge_', '') as any,
+                  symbolColor: "#000000",
+                  createdAt: Date.now()
+                } : null),
               equippedStadium: profile.equipped_stadium || "stadium_default",
               equippedKit: profile.equipped_kit || "kit_default",
               purchasedItems: profile.purchased_items || [],

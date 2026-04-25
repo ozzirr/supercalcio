@@ -143,21 +143,27 @@ export function MatchOverlay() {
       className={`fixed ${
         isMatchPage 
           ? `bg-[radial-gradient(circle_at_center,_#0a162d_0%,_#05070a_100%)] pointer-events-none ${isMatchEnded ? 'opacity-0 -z-10' : 'z-[10]'}`
-          : "transition-all w-72 h-44 rounded-3xl border-2 border-accent/40 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.05] active:scale-[0.95] z-[200]"
+          : "transition-all w-96 h-56 rounded-3xl border-2 border-accent/40 bg-black shadow-[0_30px_70px_rgba(0,0,0,0.8)] overflow-hidden cursor-pointer hover:border-accent hover:scale-[1.02] active:scale-[0.98] z-[200]"
       }`}
-      style={isMatchPage && arenaRect ? {
+      style={isMatchPage ? (arenaRect ? {
         top: arenaRect.top,
         left: arenaRect.left,
         width: arenaRect.width,
         height: arenaRect.height,
         borderRadius: '0px',
         transition: 'none'
-      } : !isMatchPage ? {
+      } : {
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        borderRadius: '0px'
+      }) : {
         left: `${pos.x}px`,
         top: `${pos.y}px`,
         transition: isDragging ? "none" : "all 0.3s ease",
         borderRadius: '24px'
-      } : {}}
+      }}
       onMouseDown={handleMouseDown}
       onClick={handlePiPClick}
     >

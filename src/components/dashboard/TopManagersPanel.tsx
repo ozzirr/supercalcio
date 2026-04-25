@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { BadgeDisplay } from "@/components/profile/badge-display";
+import type { CustomBadge } from "@/types/badge";
 
 interface TopManagersPanelProps {
   entries: any[];
@@ -51,7 +53,11 @@ export function TopManagersPanel({ entries, userId }: TopManagersPanelProps) {
                   {index + 1}
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center border border-white/10 shadow-inner">
-                   <img src="/assets/logo.png" className="w-6 h-6 object-contain grayscale brightness-200 opacity-40" alt="stemma" />
+                   {entry.custom_badge ? (
+                     <BadgeDisplay badge={entry.custom_badge as CustomBadge} size="sm" />
+                   ) : (
+                     <img src="/assets/logo.png" className="w-6 h-6 object-contain grayscale brightness-200 opacity-40" alt="stemma" />
+                   )}
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[13px] font-black uppercase tracking-tight ${isFirst ? "text-white" : "text-white/70"}`}>

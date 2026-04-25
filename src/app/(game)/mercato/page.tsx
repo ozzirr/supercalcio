@@ -31,8 +31,7 @@ export default function MercatoPage() {
         const dbRecord = data?.find((d: any) => d.player_id === p.id);
         return dbRecord || {
           player_id: p.id,
-          cost: Math.floor(Math.random() * 500) + 200,
-          base_level: 1
+          cost: Math.floor(Math.random() * 500) + 200
         };
       });
       setMarketPlayers(fullMarket);
@@ -102,10 +101,7 @@ export default function MercatoPage() {
   };
 
   const calculateRefund = (pid: string, baseCost: number) => {
-    const userRecord = ownedPlayers.find(p => p.player_id === pid);
-    const bonuses = userRecord?.stats_bonus || {};
-    const totalBonuses = Object.values(bonuses).reduce((a: any, b: any) => a + (Number(b) || 0), 0) as number;
-    return Math.floor(baseCost * 0.6) + (totalBonuses * 25);
+    return Math.floor(baseCost * 0.6);
   };
 
   const isOwned = (pid: string) => ownedPlayers.some(p => p.player_id === pid);

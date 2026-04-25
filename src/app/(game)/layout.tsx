@@ -13,10 +13,13 @@ import { MatchOverlay } from "@/components/game/MatchOverlay";
 import { MenuMusicPlayer } from "@/components/layout/menu-music-player";
 import { DailyLoginModal } from "@/components/DailyLoginModal";
 
+import { SettingsModal } from "@/components/layout/SettingsModal";
+
 export default function GameLayout({ children }: { children: React.ReactNode }) {
   const initializeUser = useGameStore(s => s.initializeUser);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const isProfileModalOpen = useGameStore(s => s.isProfileModalOpen);
   const setProfileModalOpen = useGameStore(s => s.setProfileModalOpen);
 
@@ -78,7 +81,11 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
     <>
       <ProfileSetup isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} />
       <DailyLoginModal />
-      <NavBar onOpenProfile={() => setProfileModalOpen(true)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <NavBar 
+        onOpenProfile={() => setProfileModalOpen(true)} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+      />
       <MatchOverlay />
       <MenuMusicPlayer />
       <main className="flex-1 flex flex-col pb-16 lg:pb-0">{children}</main>

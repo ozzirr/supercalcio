@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useGameStore } from "@/lib/store/game-store";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BadgeDisplay } from "@/components/profile/badge-display";
+import type { CustomBadge } from "@/types/badge";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "HOME" },
@@ -14,7 +16,7 @@ const NAV_ITEMS = [
   { href: "/shop", label: "SHOP" },
 ];
 
-export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
+export function NavBar({ onOpenProfile, onOpenSettings }: { onOpenProfile: () => void, onOpenSettings: () => void }) {
   const pathname = usePathname();
   const logout = useGameStore((s) => s.logout);
   const user = useGameStore((s) => s.user);
@@ -22,6 +24,7 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
   const matchInProgress = useGameStore((s) => s.matchInProgress);
   const energyAmount = useGameStore((s) => s.energyAmount);
   const teamName = useGameStore((s) => s.teamName);
+  const customBadge = useGameStore((s) => s.customBadge);
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -31,36 +34,34 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
 
   return (
     <>
-      <nav className="sticky top-0 z-[100] bg-black/80 backdrop-blur-2xl border-b border-gold/20 h-[85px] lg:h-[95px] flex items-center shadow-[0_10px_50px_rgba(0,0,0,0.8)] !overflow-visible">
+      <nav className="sticky top-0 z-[100] bg-black/80 backdrop-blur-2xl border-b border-gold/20 h-[85px] lg:h-[95px] flex items-center shadow-[0_10px_50px_rgba(0,0,0,0.8)]">
         {/* Top Accent Line */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-gold/50 to-transparent"></div>
 
         <div className="w-full max-w-[1700px] mx-auto px-6 lg:px-10 flex items-center justify-between relative h-full">
           
           {/* LEFT: Nav Items (Desktop) */}
-          <div className="hidden lg:flex items-center flex-1">
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 px-4">
+          <div className="hidden lg:flex items-center w-[500px]">
+            <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 px-3">
               {NAV_ITEMS.map((item, index) => {
                 const isActive = pathname === item.href;
-                const isHome = item.label === "HOME";
                 
                 return (
                   <div key={item.href} className="flex items-center">
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-2 px-4 py-2 transition-all duration-300 ${
+                      className={`flex items-center gap-1.5 px-4 py-2 transition-all duration-300 ${
                         isActive
                           ? "text-gold"
                           : "text-white/40 hover:text-white"
                       }`}
                     >
-                      {isHome && <span className="text-base text-gold">🏠</span>}
-                      <span className="text-[10px] font-black uppercase tracking-[0.25em]">
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]">
                         {item.label}
                       </span>
                     </Link>
                     {index < NAV_ITEMS.length - 1 && (
-                      <div className="w-px h-3 bg-white/10 mx-1" />
+                      <div className="w-px h-3 bg-white/10 mx-0.5" />
                     )}
                   </div>
                 );
@@ -81,8 +82,8 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
           </div>
 
           {/* CENTER: Massive Logo (Floating) */}
-          <div className="absolute left-1/2 top-[55px] -translate-x-1/2 -translate-y-1/2 z-[100]">
-            <div className="relative group">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] pointer-events-none">
+            <div className="relative group pointer-events-auto">
               {/* Radial Flare */}
               <div className="absolute inset-0 bg-gold/20 blur-[80px] lg:blur-[100px] rounded-full scale-[2.5] opacity-40 group-hover:opacity-70 transition-opacity animate-pulse"></div>
               
@@ -90,25 +91,25 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
                 <img 
                   src="/assets/logo.png" 
                   alt="GOLAZOO" 
-                  className="h-28 lg:h-44 w-auto object-contain filter drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" 
+                  className="h-20 lg:h-36 w-auto object-contain filter drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" 
                 />
               </Link>
             </div>
           </div>
 
           {/* RIGHT: GIOCA & Profile (Desktop) */}
-          <div className="hidden lg:flex flex-1 items-center justify-end gap-4">
+          <div className="hidden lg:flex w-[500px] items-center justify-end gap-3">
             {/* GIOCA Button */}
             <Link 
               href={matchInProgress ? "#" : "/match"} 
-              className={`flex items-center gap-4 px-8 py-3.5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-[0_10px_30px_rgba(251,191,36,0.2)] transition-all group overflow-hidden relative ${
+              className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-[0_10px_30px_rgba(251,191,36,0.2)] transition-all group overflow-hidden relative ${
                 matchInProgress 
                 ? "bg-white/10 text-white/20 cursor-not-allowed shadow-none" 
                 : "bg-gold text-black hover:scale-105 active:scale-95"
               }`}
             >
               <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="text-sm group-hover:translate-x-1 transition-transform">
+              <span className="text-xs group-hover:translate-x-1 transition-transform">
                 {matchInProgress ? "⏱" : "▶"}
               </span>
               <div className="flex flex-col items-start leading-none gap-0.5">
@@ -118,10 +119,17 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
             </Link>
 
             {/* Profile Info */}
-            <div className="flex items-center gap-4 bg-white/[0.03] border border-white/10 px-4 py-2.5 rounded-2xl min-w-[220px]">
-               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center p-1.5 shadow-xl relative overflow-hidden">
+            <button 
+              onClick={onOpenProfile}
+              className="flex items-center gap-4 bg-white/[0.03] border border-white/10 px-4 py-2.5 rounded-2xl min-w-[220px] hover:bg-white/10 hover:border-gold/30 transition-all group"
+            >
+               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center shadow-xl relative overflow-hidden group-hover:scale-110 transition-transform">
                   <div className="absolute inset-0 bg-gold/5" />
-                  <img src="/assets/logo.png" className="w-full h-full object-contain grayscale brightness-200 opacity-80" alt="badge" />
+                  {customBadge ? (
+                    <BadgeDisplay badge={customBadge} size="md" />
+                  ) : (
+                    <img src="/assets/logo.png" className="w-full h-full object-contain grayscale brightness-200 opacity-80" alt="badge" />
+                  )}
                </div>
                
                <div className="flex-1 flex flex-col gap-1.5">
@@ -134,17 +142,15 @@ export function NavBar({ onOpenProfile }: { onOpenProfile: () => void }) {
                   </div>
                   <div className="relative w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                      <div className="absolute inset-y-0 left-0 bg-gold shadow-[0_0_10px_#FFC324]" style={{ width: '72%' }}></div>
-                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                  </div>
-                  <div className="flex justify-between items-center text-[7px] font-black text-white/30 uppercase tracking-widest">
-                     <span>7.250 XP</span>
-                     <span>10.000 XP</span>
                   </div>
                </div>
-            </div>
+            </button>
 
             {/* Settings Gear */}
-            <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all hover:bg-white/10 hover:border-gold/30 group">
+            <button 
+              onClick={onOpenSettings}
+              className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all hover:bg-white/10 hover:border-gold/30 group"
+            >
                <span className="text-2xl group-hover:rotate-90 transition-transform duration-500">⚙️</span>
             </button>
           </div>

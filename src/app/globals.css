@@ -425,3 +425,7 @@ body {
 .glow-role-mid { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
 .glow-role-atk { box-shadow: 0 0 20px rgba(251, 113, 133, 0.3); }
 .glow-role-flex { box-shadow: 0 0 20px rgba(192, 132, 252, 0.3); }
+
+.clip-path-hexagon {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
