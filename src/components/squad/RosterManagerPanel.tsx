@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { PlayerDefinition } from "@/types/player";
+import { getOverallRating, getPlayerPosition } from "@/lib/player-display";
 
 interface RosterManagerPanelProps {
   players: PlayerDefinition[];
@@ -66,7 +67,8 @@ export function RosterManagerPanel({ players, selectedPlayerId, assignedIds, onS
         {players.map((player) => {
           const isSelected = selectedPlayerId === player.id;
           const isAssigned = assignedIds.has(player.id);
-          const roleColor = roleColors[player.position] || "text-white";
+          const position = getPlayerPosition(player);
+          const roleColor = roleColors[position] || "text-white";
           
           return (
             <motion.div
@@ -94,7 +96,7 @@ export function RosterManagerPanel({ players, selectedPlayerId, assignedIds, onS
                     {player.name}
                   </span>
                   <span className={`text-[9px] font-black uppercase tracking-widest ${roleColor}`}>
-                    {player.position}
+                    {position}
                   </span>
                 </div>
               </div>
@@ -106,7 +108,7 @@ export function RosterManagerPanel({ players, selectedPlayerId, assignedIds, onS
                     </div>
                  )}
                  <span className={`text-lg font-black italic tracking-tighter ${isSelected ? "text-gold" : "text-white/40"}`}>
-                   {player.overallRating || 78}
+                   {getOverallRating(player)}
                  </span>
               </div>
               

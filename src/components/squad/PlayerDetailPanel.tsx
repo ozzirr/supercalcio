@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { PlayerDefinition } from "@/types/player";
+import { getOverallRating, getPlayerPosition } from "@/lib/player-display";
 
 interface PlayerDetailPanelProps {
   player: PlayerDefinition | null;
@@ -27,7 +28,7 @@ export function PlayerDetailPanel({ player, onReplace, onRemove }: PlayerDetailP
     { label: "PAS", value: 57 },
     { label: "DEF", value: 80 },
     { label: "PHY", value: 51 },
-    { label: "GOA", value: player.overallRating || 78 },
+    { label: "GOA", value: getOverallRating(player) },
   ];
 
   return (
@@ -40,8 +41,8 @@ export function PlayerDetailPanel({ player, onReplace, onRemove }: PlayerDetailP
            <div className="absolute inset-0 bg-gold/10 blur-3xl rounded-full scale-125 opacity-50 group-hover:opacity-80 transition-opacity" />
            <div className="relative aspect-[3/4.2] rounded-[2rem] border-2 border-gold/40 bg-black overflow-hidden shadow-2xl transition-transform group-hover:scale-[1.02]">
               <div className="absolute top-4 left-4 z-20 space-y-0">
-                 <div className="text-4xl lg:text-5xl font-black italic text-white tracking-tighter drop-shadow-lg leading-none">{player.overallRating || 78}</div>
-                 <div className="text-[10px] lg:text-sm font-black text-white/60 uppercase tracking-widest">{player.position}</div>
+                 <div className="text-4xl lg:text-5xl font-black italic text-white tracking-tighter drop-shadow-lg leading-none">{getOverallRating(player)}</div>
+                 <div className="text-[10px] lg:text-sm font-black text-white/60 uppercase tracking-widest">{getPlayerPosition(player)}</div>
               </div>
 
               <div className="absolute top-6 right-6 z-20">

@@ -26,7 +26,8 @@ export type MatchEventType =
   | "halftime"
   | "full_time"
   | "yellow_card"
-  | "red_card";
+  | "red_card"
+  | "substitution";
 
 export type MatchEvent = {
   tick: number;

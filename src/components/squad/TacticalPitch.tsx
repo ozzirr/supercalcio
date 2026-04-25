@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { PlayerDefinition } from "@/types/player";
 import type { LineupSlot } from "@/types/squad";
+import { getOverallRating } from "@/lib/player-display";
 
 interface TacticalPitchProps {
   lineup: LineupSlot[];
@@ -55,7 +56,7 @@ export function TacticalPitch({ lineup, availablePlayers, onSlotClick, onSlotRem
                   <div className={`relative w-24 h-32 lg:w-32 lg:h-44 rounded-2xl border-2 bg-black/80 backdrop-blur-xl overflow-hidden transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-4 shadow-2xl role-border-${pos.color} glow-role-${pos.color}`}>
                      {/* Rating Overlay */}
                      <div className="absolute top-2 left-2 z-20 text-white font-black italic text-sm lg:text-xl drop-shadow-lg">
-                        {player.overallRating || 78}
+                        {getOverallRating(player)}
                      </div>
                      <div className={`absolute top-2 right-2 z-20 text-[8px] lg:text-[10px] font-black uppercase tracking-widest text-${pos.color}-400`}>
                         {pos.label}
